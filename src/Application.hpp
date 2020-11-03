@@ -9,6 +9,7 @@
 
 constexpr uint32_t WINDOW_WIDTH = 800;
 constexpr uint32_t WINDOW_HEIGHT = 600;
+constexpr size_t MAX_FRAMES_IN_FLIGHT = 3;
 
 const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
@@ -125,8 +126,10 @@ private:
     std::vector<VkFramebuffer> _swapchainFramebuffers;
 
     // Main Loop Variables
-    VkSemaphore _imageAvailableSemaphore;
-    VkSemaphore _renderFinishedSemaphore;
+    std::vector<VkSemaphore> _imageAvailableSemaphores;
+    std::vector<VkSemaphore>  _renderFinishedSemaphores;
+    std::vector<VkFence> _inFlightFences;
+    size_t _currentFrame = 0;
 
     VkCommandPool _commandPool;
     std::vector<VkCommandBuffer> _commandBuffers;
