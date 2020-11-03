@@ -45,6 +45,8 @@ public:
     static uint8_t getVerbose();
 
 private:
+    void drawFrame();
+
     void initWindow();
 
     void initVulkan();
@@ -66,6 +68,18 @@ private:
     void createImageViews();
 
     void createGraphicsPipeline();
+
+    void createRenderPass();
+
+    void createFramBuffers();
+
+    void createCommandPool();
+
+    void createCommandBuffers();
+
+    void createSemaphores();
+
+    VkShaderModule createShaderModule(const std::vector<char>& code) const; // TODO : Get this in an other file
 
     bool checkDeviceExtensionSupport(VkPhysicalDevice device) const;
 
@@ -97,13 +111,25 @@ private:
     VkQueue _presentQueue;
     VkSwapchainKHR _swapchain;
 
+    VkRenderPass _renderPass;
+    VkPipelineLayout _pipelineLayout;
+    VkPipeline _graphicsPipeline;
+
     // Parameters
     VkFormat _swapchainImageFormat;
     VkExtent2D _swapchainExtent;
 
-    // Runtime Variable
+    // Runtime Variables
     std::vector<VkImage> _swapchainImages;
     std::vector<VkImageView> _swapchainImageViews;
+    std::vector<VkFramebuffer> _swapchainFramebuffers;
+
+    // Main Loop Variables
+    VkSemaphore _imageAvailableSemaphore;
+    VkSemaphore _renderFinishedSemaphore;
+
+    VkCommandPool _commandPool;
+    std::vector<VkCommandBuffer> _commandBuffers;
 
     static uint8_t _verbose;
 #ifdef _DEBUG
