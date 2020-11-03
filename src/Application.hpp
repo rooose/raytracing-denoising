@@ -45,6 +45,8 @@ public:
     /// <returns>Verbose Mode</returns>
     static uint8_t getVerbose();
 
+    void setFrameBufferResize();
+
 private:
     void drawFrame();
 
@@ -64,7 +66,7 @@ private:
 
     void createLogicalDevice();
 
-    void createSwapChain();
+    void createSwapchain();
 
     void createImageViews();
 
@@ -79,6 +81,10 @@ private:
     void createCommandBuffers();
 
     void createSemaphores();
+
+    void recreateSwapchain();
+
+    void cleanupSwapchain();
 
     VkShaderModule createShaderModule(const std::vector<char>& code) const; // TODO : Get this in an other file
 
@@ -130,6 +136,8 @@ private:
     std::vector<VkSemaphore>  _renderFinishedSemaphores;
     std::vector<VkFence> _inFlightFences;
     size_t _currentFrame = 0;
+
+    bool _framebufferResized = false;
 
     VkCommandPool _commandPool;
     std::vector<VkCommandBuffer> _commandBuffers;
