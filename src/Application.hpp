@@ -78,15 +78,20 @@ private:
 
     void createCommandPool();
 
+    void createVertexBuffer();
+
+    void createIndexBuffer();
+
     void createCommandBuffers();
 
     void createSemaphores();
 
+    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+    void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+
     void recreateSwapchain();
 
     void cleanupSwapchain();
-
-    VkShaderModule createShaderModule(const std::vector<char>& code) const; // TODO : Get this in an other file
 
     bool checkDeviceExtensionSupport(VkPhysicalDevice device) const;
 
@@ -101,6 +106,8 @@ private:
     VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentMode) const;
 
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) const;
+
+    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 #ifdef _DEBUG
     void setupDebugMessenger();
@@ -136,6 +143,10 @@ private:
     std::vector<VkSemaphore>  _renderFinishedSemaphores;
     std::vector<VkFence> _inFlightFences;
     size_t _currentFrame = 0;
+    VkBuffer _vertexBuffer;
+    VkDeviceMemory _vertexBufferMemory;
+    VkBuffer _indexBuffer;
+    VkDeviceMemory _indexBufferMemory;
 
     bool _framebufferResized = false;
 
