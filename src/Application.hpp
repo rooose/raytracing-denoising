@@ -70,6 +70,8 @@ private:
 
     void createImageViews();
 
+    void createDescriptorSetLayout();
+
     void createGraphicsPipeline();
 
     void createRenderPass();
@@ -82,14 +84,23 @@ private:
 
     void createIndexBuffer();
 
+    void createUniformBuffers();
+
+    void createDescriptorPool();
+
+    void createDescriptorSets();
+
     void createCommandBuffers();
 
     void createSemaphores();
 
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+    
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
     void recreateSwapchain();
+
+    void updateUniformBuffer(uint32_t currentImage);
 
     void cleanupSwapchain();
 
@@ -126,6 +137,7 @@ private:
     VkSwapchainKHR _swapchain;
 
     VkRenderPass _renderPass;
+    VkDescriptorSetLayout _descriptorSetLayout;
     VkPipelineLayout _pipelineLayout;
     VkPipeline _graphicsPipeline;
 
@@ -147,6 +159,13 @@ private:
     VkDeviceMemory _vertexBufferMemory;
     VkBuffer _indexBuffer;
     VkDeviceMemory _indexBufferMemory;
+    
+    std::vector<VkBuffer> _uniformBuffers;
+    std::vector<VkDeviceMemory> _uniformBuffersMemory;
+
+    VkDescriptorPool _descriptorPool;
+    std::vector<VkDescriptorSet> _descriptorSets;
+
 
     bool _framebufferResized = false;
 
