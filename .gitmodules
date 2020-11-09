@@ -6,3 +6,6 @@
 	path = third-party/glfw
 	url = https://github.com/glfw/glfw.git
 	branch = 3.3-stable
+[submodule "stb"]
+	path = .\\third-party\\stb
+	url = https://github.com/nothings/stb

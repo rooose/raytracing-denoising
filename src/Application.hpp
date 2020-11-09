@@ -34,15 +34,9 @@ struct SwapChainSupportDetails {
 class Application {
 public:
     void run();
-    /// <summary>
-    /// Set verbose level for the application
-    /// </summary>
-    /// <param name="verboseMode"> Verbose Level [0,3]</param>
+
     static void setVerbose(uint8_t verboseMode);
-    /// <summary>
-    /// Get Verbose of the application
-    /// </summary>
-    /// <returns>Verbose Mode</returns>
+
     static uint8_t getVerbose();
 
     void setFrameBufferResize();
@@ -80,6 +74,14 @@ private:
 
     void createCommandPool();
 
+    void createDepthResources();
+
+    void createTextureImage();
+
+    void createTextureImageView();
+
+    void createTextureSampler();
+
     void createVertexBuffer();
 
     void createIndexBuffer();
@@ -95,8 +97,16 @@ private:
     void createSemaphores();
 
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-    
+
+    VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
+
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+
+    void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+
+    void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+
+    void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
     void recreateSwapchain();
 
@@ -120,6 +130,10 @@ private:
 
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
+    VkCommandBuffer beginSingleTimeCommands();
+
+    void endSingleTimeCommands(VkCommandBuffer commandBuffer);
+
 #ifdef _DEBUG
     void setupDebugMessenger();
 #endif
@@ -132,7 +146,7 @@ private:
     VkPhysicalDevice _physDevice { VK_NULL_HANDLE };
     VkDevice _device;
 
-    VkQueue _graphicQueue;
+    VkQueue _graphicsQueue;
     VkQueue _presentQueue;
     VkSwapchainKHR _swapchain;
 
@@ -152,25 +166,33 @@ private:
 
     // Main Loop Variables
     std::vector<VkSemaphore> _imageAvailableSemaphores;
-    std::vector<VkSemaphore>  _renderFinishedSemaphores;
+    std::vector<VkSemaphore> _renderFinishedSemaphores;
     std::vector<VkFence> _inFlightFences;
     size_t _currentFrame = 0;
     VkBuffer _vertexBuffer;
     VkDeviceMemory _vertexBufferMemory;
     VkBuffer _indexBuffer;
     VkDeviceMemory _indexBufferMemory;
-    
+
     std::vector<VkBuffer> _uniformBuffers;
     std::vector<VkDeviceMemory> _uniformBuffersMemory;
 
     VkDescriptorPool _descriptorPool;
     std::vector<VkDescriptorSet> _descriptorSets;
 
-
     bool _framebufferResized = false;
 
     VkCommandPool _commandPool;
     std::vector<VkCommandBuffer> _commandBuffers;
+
+    VkImage _textureImage;
+    VkDeviceMemory _textureImageMemory;
+    VkImageView _textureImageView;
+    VkSampler _textureSampler;
+
+    VkImage _depthImage;
+    VkDeviceMemory _depthImageMemory;
+    VkImageView _depthImageView;
 
     static uint8_t _verbose;
 #ifdef _DEBUG

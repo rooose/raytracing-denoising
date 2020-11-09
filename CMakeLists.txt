@@ -20,6 +20,7 @@ add_subdirectory("${CMAKE_SOURCE_DIR}/third-party")
 add_subdirectory("${CMAKE_SOURCE_DIR}/src/shaders")
 find_package(Vulkan REQUIRED FATAL_ERROR)
 
+include_directories("${CMAKE_SOURCE_DIR}/third-party/stb")
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${SHADERS})
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
