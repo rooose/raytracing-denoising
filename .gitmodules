@@ -1,0 +1,11 @@
+[submodule "glm"]
+	path = third-party/glm
+	url = https://github.com/g-truc/glm.git
+	branch = master
+[submodule "glfw"]
+	path = third-party/glfw
+	url = https://github.com/glfw/glfw.git
+	branch = 3.3-stable
+[submodule "stb"]
+	path = .\\third-party\\stb
+	url = https://github.com/nothings/stb
