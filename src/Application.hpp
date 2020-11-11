@@ -17,7 +17,7 @@ constexpr uint32_t WINDOW_HEIGHT = 600;
 constexpr size_t MAX_FRAMES_IN_FLIGHT = 3;
 
 // Rose
-const std::string MODEL_PATH = "../../assets/models/viking_room.obj";
+const std::string MODEL_PATH = "../../assets/models/structure.obj";
 const std::string TEXTURE_PATH = "../../assets/textures/viking_room.png";
 
 const std::vector<const char*> deviceExtensions = {
