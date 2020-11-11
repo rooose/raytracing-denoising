@@ -3,6 +3,8 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
+#include <iostream>
+
 Character::Character()
 {
     _viewMatrix = glm::lookAt(_pos, { 0, 0, 0 }, _up);
@@ -96,14 +98,11 @@ void Character::updateMouse(GLFWwindow* window, double deltaTime)
 
         // New angles
         _horizontalAngle += _mouseSpeed * float(deltaTime * xDiff);
-        _verticalAngle -= _mouseSpeed * float(deltaTime * yDiff);
+        _verticalAngle += _mouseSpeed * float(deltaTime * yDiff);
 
-        _dir = glm::vec3(std::cos(_verticalAngle) * std::sin(_horizontalAngle),
-            std::cos(_verticalAngle) * std::cos(_horizontalAngle), std::sin(_verticalAngle));
+        std::cout << _horizontalAngle << " , " << _verticalAngle << std::endl;
 
-        _up = glm::vec3(0.f, 0.f, 1.f);
-
-        _right = glm::normalize(glm::cross(_dir, _up));
+        updateVecs();
     } else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS && (xpos > 0 && xpos < width && ypos > 0 && ypos < height)) {
         enableFocus(window);
     }
@@ -146,4 +145,14 @@ void Character::disableFocus(GLFWwindow* window)
 {
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     _focused = false;
+}
+
+void Character::updateVecs()
+{
+    _dir = glm::vec3(std::cos(_verticalAngle) * std::sin(_horizontalAngle),
+        std::cos(_verticalAngle) * std::cos(_horizontalAngle), std::sin(_verticalAngle));
+
+    _right = glm::vec3(std::sin(_horizontalAngle - glm::pi<float>() / 2.0f), std::cos(_horizontalAngle - glm::pi<float>() / 2.0f), 0.f);
+
+    _up = glm::normalize(glm::cross(_right, _dir));
 }

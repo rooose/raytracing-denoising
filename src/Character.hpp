@@ -41,19 +41,21 @@ private:
 
     void disableFocus(GLFWwindow* window);
 
+    void updateVecs();
+
 private:
     glm::vec3 _pos { 2.f, 2.f, 2.f };
-    glm::vec3 _up { 0.f, 0.f, 0.1f };
-    glm::vec3 _dir { 0.f, 1.f, 0.f };
-
+    
     float _characterSpeed { 0.005f };
     float _mouseSpeed { 0.2f };
     bool _focused { false };
 
-    float _horizontalAngle { 3.86528f };
-    float _verticalAngle { -0.566883f };
+    float _horizontalAngle { 7.f };
+    float _verticalAngle { -2.5f };
 
     // Generated Data
+    glm::vec3 _up { 0.f, 0.f, 0.1f };
+    glm::vec3 _dir { 0.f, 1.f, 0.f };
     glm::vec3 _right { 0.f };
     glm::mat4 _viewMatrix { 0.f };
 };
