@@ -94,9 +94,10 @@ void Character::updateMouse(GLFWwindow* window, double deltaTime)
         float xDiff = static_cast<float>(xpos - mid_width) / width;
         float yDiff = static_cast<float>(ypos - mid_height) / height;
 
+
         // New angles
-        _horizontalAngle += _mouseSpeed * float(deltaTime * xDiff);
-        _verticalAngle += _mouseSpeed * float(deltaTime * yDiff);
+        _horizontalAngle = std::fmod(_horizontalAngle + _mouseSpeed * static_cast<float>(deltaTime * xDiff), 2.f * glm::pi<float>());
+        _verticalAngle = std::fmod(_verticalAngle + _mouseSpeed * static_cast<float>(deltaTime * yDiff), 2.f * glm::pi<float>());
 
         updateVecs();
     } else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS && (xpos > 0 && xpos < width && ypos > 0 && ypos < height)) {

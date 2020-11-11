@@ -19,6 +19,8 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
+#define FPS_COUNTER_TOP 256
+
 uint8_t Application::_verbose = 0;
 
 void Application::run()
@@ -224,14 +226,26 @@ void Application::createVKInstance()
 
 void Application::mainLoop()
 {
+    size_t counter = 0;
+    float timeSum = 0;
     auto startTime = std::chrono::high_resolution_clock::now();
 
     while (!glfwWindowShouldClose(_window)) {
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+    startTime = std::chrono::high_resolution_clock::now();
         glfwPollEvents();
         _character.update(_window, time);
         drawFrame();
+
+        timeSum += time;
+        counter++;
+
+        if (counter >= FPS_COUNTER_TOP) {
+            std::cout << "FPS : " << static_cast<float>(counter) / timeSum << std::endl;
+            counter = 0;
+            timeSum = 0.f;
+        }
     }
 
     vkDeviceWaitIdle(_device);
