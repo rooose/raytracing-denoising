@@ -24,7 +24,7 @@ include_directories("${CMAKE_SOURCE_DIR}/third-party/stb")
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${SHADERS})
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} glm::glm glfw Vulkan::Vulkan)
+target_link_libraries(${PROJECT_NAME} glm::glm glfw Vulkan::Vulkan tinyobjloader)
 
 add_dependencies(${PROJECT_NAME} Shaders)
 
