@@ -44,6 +44,11 @@ void Application::setFrameBufferResize()
     _framebufferResized = true;
 }
 
+Character& Application::getCharacter()
+{
+    return _character;
+}
+
 void Application::drawFrame()
 {
     vkWaitForFences(_device, 1, &_inFlightFences[_currentFrame], VK_TRUE, UINT64_MAX);
@@ -113,6 +118,11 @@ void Application::initWindow()
         auto app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
         app->setFrameBufferResize();
     });
+
+    glfwSetWindowFocusCallback(_window, [](GLFWwindow* window, int focused) {
+        auto app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
+        app->getCharacter().onFocus(window, focused);
+        });
 }
 
 void Application::initVulkan()
@@ -214,8 +224,13 @@ void Application::createVKInstance()
 
 void Application::mainLoop()
 {
+    auto startTime = std::chrono::high_resolution_clock::now();
+
     while (!glfwWindowShouldClose(_window)) {
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
         glfwPollEvents();
+        _character.update(_window, time);
         drawFrame();
     }
 
@@ -1394,7 +1409,7 @@ void Application::updateUniformBuffer(uint32_t currentImage)
     UniformBufferObject ubo {};
     //ubo.model = glm::rotate(glm::mat4(1.f), glm::radians(45.f), glm::vec3(0.f, 0.f, 1.f));
     ubo.model = glm::rotate(glm::mat4(1.f), time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
-    ubo.view = glm::lookAt(glm::vec3(2.f, 2.f, 2.f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.f, 0.f, 1.f));
+    ubo.view = _character.getViewMatrix();
     ubo.proj = glm::perspective(glm::radians(80.f), _swapchainExtent.width / (float)_swapchainExtent.height, 0.1f, 10.f);
     ubo.proj[1][1] *= -1;
 

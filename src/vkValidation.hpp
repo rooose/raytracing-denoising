@@ -1,3 +1,5 @@
+#pragma once
+
 #include <vector>
 
 const std::vector<const char*> validationLayers = {

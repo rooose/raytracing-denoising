@@ -1,4 +1,7 @@
+#pragma once
+
 #include "Utils.hpp"
+#include "Character.hpp"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -46,6 +49,8 @@ public:
     static uint8_t getVerbose();
 
     void setFrameBufferResize();
+
+    Character& getCharacter();
 
 private:
     void drawFrame();
@@ -154,6 +159,9 @@ private:
     VkSurfaceKHR _surface;
     VkPhysicalDevice _physDevice { VK_NULL_HANDLE };
     VkDevice _device;
+
+    Character _character;
+
 
     VkQueue _graphicsQueue;
     VkQueue _presentQueue;
