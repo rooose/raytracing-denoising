@@ -3,8 +3,6 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
-#include <iostream>
-
 Character::Character()
 {
     _viewMatrix = glm::lookAt(_pos, { 0, 0, 0 }, _up);
@@ -99,8 +97,6 @@ void Character::updateMouse(GLFWwindow* window, double deltaTime)
         // New angles
         _horizontalAngle += _mouseSpeed * float(deltaTime * xDiff);
         _verticalAngle += _mouseSpeed * float(deltaTime * yDiff);
-
-        std::cout << _horizontalAngle << " , " << _verticalAngle << std::endl;
 
         updateVecs();
     } else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS && (xpos > 0 && xpos < width && ypos > 0 && ypos < height)) {
