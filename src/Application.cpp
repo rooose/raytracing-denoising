@@ -1,6 +1,5 @@
 #include "Application.hpp"
 #include "ShaderModule.hpp"
-#include "Utils.hpp"
 
 #ifdef _DEBUG
 #include "vkValidation.hpp"
@@ -14,8 +13,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <chrono>
-
 #include <set>
+#include <unordered_map>
+
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
 
 uint8_t Application::_verbose = 0;
 
@@ -134,6 +136,9 @@ void Application::initVulkan()
     createTextureImage();
     createTextureImageView();
     createTextureSampler();
+    // Rose
+    loadModel();
+
     createVertexBuffer();
     createIndexBuffer();
     createUniformBuffers();
@@ -890,7 +895,7 @@ void Application::createDepthResources()
 void Application::createTextureImage()
 {
     int texWidth, texHeight, texChannels;
-    stbi_uc* pixels = stbi_load("../../assets/textures/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha); // TODO: tmp filename
+    stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     VkDeviceSize imageSize = texWidth * texHeight * 4;
 
     if (!pixels) {
@@ -948,6 +953,46 @@ void Application::createTextureSampler()
         throw std::runtime_error("Failed to create texture sampler");
     }
 
+}
+
+// Rose
+void Application::loadModel() {
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn, err;
+
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str())) {
+        throw std::runtime_error(warn + err);
+    }
+    
+    std::unordered_map<Vertex, uint32_t> uniqueVertices{};
+
+    for (const auto& shape : shapes) {
+        for (const auto& index : shape.mesh.indices) {
+            Vertex vertex{};
+
+            vertex.pos = {
+            attrib.vertices[3 * index.vertex_index + 0],
+            attrib.vertices[3 * index.vertex_index + 1],
+            attrib.vertices[3 * index.vertex_index + 2]
+                    };
+
+            vertex.texCoord = {
+                attrib.texcoords[2 * index.texcoord_index + 0],
+                1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+            };
+
+            vertex.color = { 1.0f, 1.0f, 1.0f };
+
+            if (uniqueVertices.count(vertex) == 0) {
+                uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
+                vertices.push_back(vertex);
+            }
+
+            indices.push_back(uniqueVertices[vertex]);
+        }
+    }
 }
 
 void Application::createVertexBuffer()
@@ -1119,7 +1164,8 @@ void Application::createCommandBuffers()
         VkBuffer vertexBuffers[] = { _vertexBuffer };
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(_commandBuffers[i], 0, 1, vertexBuffers, offsets);
-        vkCmdBindIndexBuffer(_commandBuffers[i], _indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+        //Rose
+        vkCmdBindIndexBuffer(_commandBuffers[i], _indexBuffer, 0, VK_INDEX_TYPE_UINT32);
         vkCmdBindDescriptorSets(_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &_descriptorSets[i], 0, nullptr);
 
         vkCmdDrawIndexed(_commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
