@@ -18,6 +18,6 @@
 [submodule "third-party/vkglTF"]
 	path = third-party/vkglTF
 	url = https://github.com/SaschaWillems/Vulkan-glTF-PBR.git
-[submodule ".\\third-party\\gli"]
-	path = .\\third-party\\gli
+[submodule "third-party/gli"]
+	path = third-party/gli
 	url = https://github.com/g-truc/gli.git

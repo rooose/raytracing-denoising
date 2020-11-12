@@ -20,7 +20,6 @@ layout(location = 0) out vec4 outColor;
 void main() {
 
 	mat4 invvp = inverse(ubo.proj * ubo.view);
-	
 	vec4 reflection = invvp * vec4(reflect(fragPos, fragNormal), 1);
 	vec3 R = normalize(reflection.xyz);
 
@@ -29,10 +28,11 @@ void main() {
 	float xz = sqrt(R.x * R.x + R.z * R.z);
 	float phi = acos(R.y);
 
-	float h = phi / (2 * PI);
-	float l = theta / PI;
+	float h = phi / PI;
+	float l = theta / (2 * PI );
 
 	vec2 coords = vec2(l, h);
 
 	outColor = texture(texSampler, coords);
+//	outColor = vec4(R, 1.);
 }
