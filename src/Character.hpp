@@ -47,7 +47,7 @@ private:
     glm::vec3 _pos { 2.f, 2.f, 2.f };
     
     float _characterSpeed { 4.f };
-    float _mouseSpeed { 100.f };
+    float _mouseSpeed { 200.f };
     bool _focused { false };
 
     float _horizontalAngle { 7.f };

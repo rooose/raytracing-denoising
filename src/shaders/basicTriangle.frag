@@ -18,21 +18,19 @@ layout(binding = 1) uniform sampler2D texSampler;
 layout(location = 0) out vec4 outColor;
 
 void main() {
+    vec3 I = normalize(fragPos);
+	mat4 invvp = transpose(inverse(ubo.view));
+	vec4 reflection = invvp * vec4(reflect(I, fragNormal), 1.);
+	vec3 R = normalize(fragNormal.xyz);
 
-	mat4 invvp = inverse(ubo.proj * ubo.view);
-	vec4 reflection = invvp * vec4(reflect(fragPos, fragNormal), 1);
-	vec3 R = normalize(reflection.xyz);
-
-
-	float theta = atan(R.z / R.x);
+	float theta = atan(R.y / R.x) + ((R.x < 0)? sign(R.y) * PI : 0.);
 	float xz = sqrt(R.x * R.x + R.z * R.z);
-	float phi = acos(R.y);
+	float phi = asin(R.z);
 
-	float h = phi / PI;
-	float l = theta / (2 * PI );
+	float h = phi / PI + 0.5;
+	float l = theta / (2 * PI ) + 0.5;
 
-	vec2 coords = vec2(l, h);
+	vec2 coords = vec2(l,- h);
 
 	outColor = texture(texSampler, coords);
-//	outColor = vec4(R, 1.);
 }
