@@ -16,8 +16,16 @@
 #include <set>
 #include <unordered_map>
 
+#include <tiny_gltf.h>
+
+#define GetTypeSizeInBytes(x) GetNumComponentsInType(x)
+
+#define TINYGLTF_NO_INCLUDE_STB_IMAGE
+#include <VulkanglTFModel.hpp>
+
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
+
 
 #define FPS_COUNTER_TOP 256
 
@@ -143,7 +151,7 @@ void Application::initVulkan()
     createDescriptorSetLayout();
     createGraphicsPipeline();
     createDepthResources();
-    createFramBuffers();
+    createFrameBuffers();
     createCommandPool();
     createTextureImage();
     createTextureImageView();
@@ -651,7 +659,7 @@ void Application::createDescriptorSetLayout()
     uboLayoutBinding.binding = 0;
     uboLayoutBinding.descriptorCount = 1;
     uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     uboLayoutBinding.pImmutableSamplers = nullptr;
 
     VkDescriptorSetLayoutBinding samplerLayoutBinding {};
@@ -875,7 +883,7 @@ void Application::createRenderPass()
     }
 }
 
-void Application::createFramBuffers()
+void Application::createFrameBuffers()
 {
     _swapchainFramebuffers.resize(_swapchainImageViews.size());
 
@@ -1014,19 +1022,25 @@ void Application::loadModel() {
 
             vertex.color = { 1.0f, 1.0f, 1.0f };
 
+            vertex.normal = {
+                attrib.normals[3 * index.normal_index + 0],
+                attrib.normals[3 * index.normal_index + 1],
+                attrib.normals[3 * index.normal_index + 2]
+            };
+
             if (uniqueVertices.count(vertex) == 0) {
-                uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
-                vertices.push_back(vertex);
+                uniqueVertices[vertex] = static_cast<uint32_t>(_vertices.size());
+                _vertices.push_back(vertex);
             }
 
-            indices.push_back(uniqueVertices[vertex]);
+            _indices.push_back(uniqueVertices[vertex]);
         }
     }
 }
 
 void Application::createVertexBuffer()
 {
-    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+    VkDeviceSize bufferSize = sizeof(_vertices[0]) * _vertices.size();
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -1034,7 +1048,7 @@ void Application::createVertexBuffer()
 
     void* data;
     vkMapMemory(_device, stagingBufferMemory, 0, bufferSize, NULL, &data);
-    memcpy(data, vertices.data(), static_cast<size_t>(bufferSize));
+    memcpy(data, _vertices.data(), static_cast<size_t>(bufferSize));
     vkUnmapMemory(_device, stagingBufferMemory);
 
     createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _vertexBuffer, _vertexBufferMemory);
@@ -1047,7 +1061,7 @@ void Application::createVertexBuffer()
 
 void Application::createIndexBuffer()
 {
-    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+    VkDeviceSize bufferSize = sizeof(_indices[0]) * _indices.size();
 
     VkBuffer stagingBuffer;
     VkDeviceMemory staginBufferMemory;
@@ -1055,7 +1069,7 @@ void Application::createIndexBuffer()
 
     void* data;
     vkMapMemory(_device, staginBufferMemory, 0, bufferSize, NULL, &data);
-    memcpy(data, indices.data(), static_cast<uint32_t>(bufferSize));
+    memcpy(data, _indices.data(), static_cast<uint32_t>(bufferSize));
     vkUnmapMemory(_device, staginBufferMemory);
 
     createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _indexBuffer, _indexBufferMemory);
@@ -1193,11 +1207,10 @@ void Application::createCommandBuffers()
         VkBuffer vertexBuffers[] = { _vertexBuffer };
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(_commandBuffers[i], 0, 1, vertexBuffers, offsets);
-        //Rose
         vkCmdBindIndexBuffer(_commandBuffers[i], _indexBuffer, 0, VK_INDEX_TYPE_UINT32);
         vkCmdBindDescriptorSets(_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &_descriptorSets[i], 0, nullptr);
 
-        vkCmdDrawIndexed(_commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+        vkCmdDrawIndexed(_commandBuffers[i], static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
 
         vkCmdEndRenderPass(_commandBuffers[i]);
 
@@ -1406,7 +1419,7 @@ void Application::recreateSwapchain()
     createRenderPass();
     createGraphicsPipeline();
     createDepthResources();
-    createFramBuffers();
+    createFrameBuffers();
     createUniformBuffers();
     createDescriptorPool();
     createDescriptorSets();

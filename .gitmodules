@@ -12,3 +12,12 @@
 [submodule "third-party/tinyobjloader"]
 	path = third-party/tinyobjloader
 	url = https://github.com/tinyobjloader/tinyobjloader
+[submodule "third-party/tinygltf"]
+	path = third-party/tinygltf
+	url = https://github.com/syoyo/tinygltf.git
+[submodule "third-party/vkglTF"]
+	path = third-party/vkglTF
+	url = https://github.com/SaschaWillems/Vulkan-glTF-PBR.git
+[submodule ".\\third-party\\gli"]
+	path = .\\third-party\\gli
+	url = https://github.com/g-truc/gli.git

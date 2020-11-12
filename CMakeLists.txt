@@ -21,10 +21,13 @@ add_subdirectory("${CMAKE_SOURCE_DIR}/src/shaders")
 find_package(Vulkan REQUIRED FATAL_ERROR)
 
 include_directories("${CMAKE_SOURCE_DIR}/third-party/stb")
+include_directories("${CMAKE_SOURCE_DIR}/third-party/tinygltf")
+include_directories("${CMAKE_SOURCE_DIR}/third-party/vkgLTF/base")
+
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${SHADERS})
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} glm::glm glfw Vulkan::Vulkan tinyobjloader)
+target_link_libraries(${PROJECT_NAME} glm::glm glfw Vulkan::Vulkan tinyobjloader gli)
 
 add_dependencies(${PROJECT_NAME} Shaders)
 

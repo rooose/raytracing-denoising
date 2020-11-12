@@ -3,6 +3,7 @@
 #include "Utils.hpp"
 #include "Character.hpp"
 
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -12,13 +13,13 @@
 #include <stdexcept>
 #include <vector>
 
+
 constexpr uint32_t WINDOW_WIDTH = 800;
 constexpr uint32_t WINDOW_HEIGHT = 600;
 constexpr size_t MAX_FRAMES_IN_FLIGHT = 3;
 
-// Rose
-const std::string MODEL_PATH = "../../assets/models/viking_room.obj";
-const std::string TEXTURE_PATH = "../../assets/textures/viking_room.png";
+const std::string MODEL_PATH = "../../assets/models/sphere.obj";
+const std::string TEXTURE_PATH = "../../assets/textures/colorful_studio_2k.hdr";
 
 const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
@@ -81,7 +82,7 @@ private:
 
     void createRenderPass();
 
-    void createFramBuffers();
+    void createFrameBuffers();
 
     void createCommandPool();
 
@@ -93,7 +94,6 @@ private:
 
     void createTextureSampler();
 
-    // Rose
     void loadModel();
 
     void createVertexBuffer();
@@ -186,9 +186,9 @@ private:
     std::vector<VkSemaphore> _renderFinishedSemaphores;
     std::vector<VkFence> _inFlightFences;
     size_t _currentFrame = 0;
-    //Rose
-    std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;
+
+    std::vector<Vertex> _vertices;
+    std::vector<uint32_t> _indices;
 
     VkBuffer _vertexBuffer;
     VkDeviceMemory _vertexBufferMemory;
