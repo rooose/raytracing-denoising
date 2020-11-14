@@ -18,11 +18,11 @@ layout(location = 2) out vec3 fragNormal;
 layout(location = 3) out vec3 fragPos;
 
 void main() {
-    vec4 fragPositionv4 =  ubo.view * ubo.model * vec4( inPosition, 1.0);
-    vec4 fragNomalv4 =   ubo.model * vec4( inNormal, 1.);
-    gl_Position = ubo.proj *fragPositionv4;
+    vec4 fragPositionv4 =  ubo.view * ubo.model * vec4(inPosition, 1.0);
+    vec4 fragNomalv4 =  ubo.view *  ubo.model * vec4(inNormal, 0.);
+    gl_Position = ubo.proj * fragPositionv4;
     fragColor = inColor;
-    fragNormal = fragNomalv4.xyz / fragNomalv4.w ;
+    fragNormal = fragNomalv4.xyz;
     fragTexCoord = inTexCoord;
     fragPos = fragPositionv4.xyz / fragPositionv4.w ;
 }
