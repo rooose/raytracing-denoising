@@ -22,10 +22,10 @@ GltfLoader::GltfLoader(Application& app)
 GltfLoader::~GltfLoader()
 {
     // Release all Vulkan resources allocated for the model
-    vkDestroyBuffer(_app._device, vertices.buffer, nullptr);
-    vkFreeMemory(_app._device, vertices.memory, nullptr);
-    vkDestroyBuffer(_app._device, indices.buffer, nullptr);
-    vkFreeMemory(_app._device, indices.memory, nullptr);
+    vkDestroyBuffer(_app._device, _vertices.buffer, nullptr);
+    vkFreeMemory(_app._device, _vertices.memory, nullptr);
+    vkDestroyBuffer(_app._device, _indices.buffer, nullptr);
+    vkFreeMemory(_app._device, _indices.memory, nullptr);
 }
 
 tinygltf::Model& GltfLoader::loadModel(const std::string& fileName, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer)
@@ -59,7 +59,7 @@ tinygltf::Model& GltfLoader::loadModel(const std::string& fileName, std::vector<
 
     size_t vertexBufferSize = vertexBuffer.size() * sizeof(Vertex);
     size_t indexBufferSize = indexBuffer.size() * sizeof(uint32_t);
-    indices.count = static_cast<uint32_t>(indexBuffer.size());
+    _indices.count = static_cast<uint32_t>(indexBuffer.size());
 
     VkBuffer vertexstagingBuffer;
     VkDeviceMemory vertexstagingBufferMemory;
@@ -70,9 +70,9 @@ tinygltf::Model& GltfLoader::loadModel(const std::string& fileName, std::vector<
     memcpy(data, vertexBuffer.data(), static_cast<size_t>(vertexBufferSize));
     vkUnmapMemory(_app._device, vertexstagingBufferMemory);
 
-    _app.createBuffer(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertices.buffer, vertices.memory);
+    _app.createBuffer(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _vertices.buffer, _vertices.memory);
 
-    _app.copyBuffer(vertexstagingBuffer, vertices.buffer, vertexBufferSize);
+    _app.copyBuffer(vertexstagingBuffer, _vertices.buffer, vertexBufferSize);
 
     vkDestroyBuffer(_app._device, vertexstagingBuffer, nullptr);
     vkFreeMemory(_app._device, vertexstagingBufferMemory, nullptr);
@@ -85,9 +85,9 @@ tinygltf::Model& GltfLoader::loadModel(const std::string& fileName, std::vector<
     memcpy(data, indexBuffer.data(), static_cast<size_t>(indexBufferSize));
     vkUnmapMemory(_app._device, indexstagingBufferMemory);
 
-    _app.createBuffer(indexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indices.buffer, indices.memory);
+    _app.createBuffer(indexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _indices.buffer, _indices.memory);
 
-    _app.copyBuffer(indexstagingBuffer, indices.buffer, indexBufferSize);
+    _app.copyBuffer(indexstagingBuffer, _indices.buffer, indexBufferSize);
 
     vkDestroyBuffer(_app._device, indexstagingBuffer, nullptr);
     vkFreeMemory(_app._device, indexstagingBufferMemory, nullptr);
@@ -130,17 +130,17 @@ void GltfLoader::loadImages(tinygltf::Model& input)
 
 void GltfLoader::loadMaterials(tinygltf::Model& input)
 {
-    materials.resize(input.materials.size());
+    _materials.resize(input.materials.size());
     for (size_t i = 0; i < input.materials.size(); i++) {
         // We only read the most basic properties required for our sample
         tinygltf::Material glTFMaterial = input.materials[i];
         // Get the base color factor
         if (glTFMaterial.values.find("baseColorFactor") != glTFMaterial.values.end()) {
-            materials[i].baseColorFactor = glm::make_vec4(glTFMaterial.values["baseColorFactor"].ColorFactor().data());
+            _materials[i].baseColorFactor = glm::make_vec4(glTFMaterial.values["baseColorFactor"].ColorFactor().data());
         }
         // Get base color texture index
         if (glTFMaterial.values.find("baseColorTexture") != glTFMaterial.values.end()) {
-            materials[i].baseColorTextureIndex = glTFMaterial.values["baseColorTexture"].TextureIndex();
+            _materials[i].baseColorTextureIndex = glTFMaterial.values["baseColorTexture"].TextureIndex();
         }
     }
 }
@@ -271,15 +271,15 @@ void GltfLoader::loadNode(const tinygltf::Node& inputNode, const tinygltf::Model
     if (parent) {
         parent->children.push_back(node);
     } else {
-        nodes.push_back(node);
+        _nodes.push_back(node);
     }
 }
 
 void GltfLoader::loadTextures(tinygltf::Model& input)
 {
-    textures.resize(input.textures.size());
+    _textures_idx.resize(input.textures.size());
     for (size_t i = 0; i < input.textures.size(); i++) {
-        textures[i].imageIndex = input.textures[i].source;
+        _textures_idx[i].imageIndex = input.textures[i].source;
     }
 }
 
@@ -319,7 +319,7 @@ void GltfLoader::drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pipeli
         for (const GltfLoader::Primitive& primitive : node.mesh.primitives) {
             if (primitive.indexCount > 0) {
                 // Get the texture index for this primitive
-                Texture texture = textures[materials[primitive.materialIndex].baseColorTextureIndex];
+                Texture texture = _textures_idx[_materials[primitive.materialIndex].baseColorTextureIndex];
                 descriptorWrites[1] = _textures[texture.imageIndex].getDescriptorSet(descriptorSet, 1);
                 vkUpdateDescriptorSets(_app._device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
                 // Bind the descriptor for the current primitive's texture
@@ -338,10 +338,10 @@ void GltfLoader::draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLa
 {
     // All vertices and indices are stored in single buffers, so we only need to bind once
     VkDeviceSize offsets[1] = { 0 };
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertices.buffer, offsets);
-    vkCmdBindIndexBuffer(commandBuffer, indices.buffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &_vertices.buffer, offsets);
+    vkCmdBindIndexBuffer(commandBuffer, _indices.buffer, 0, VK_INDEX_TYPE_UINT32);
     // Render all nodes at top-level
-    for (auto& node : nodes) {
+    for (auto& node : _nodes) {
         drawNode(commandBuffer, pipelineLayout, currentFrame, node);
     }
 }

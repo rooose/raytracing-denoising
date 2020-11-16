@@ -53,10 +53,10 @@ private:
 
 private:
     std::vector<TextureModule> _textures;
-    std::vector<Texture> textures;
+    std::vector<Texture> _textures_idx;
     std::vector<SamplerModule> _samplers;
-    std::vector<Material> materials;
-    std::vector<Node> nodes;
+    std::vector<Material> _materials;
+    std::vector<Node> _nodes;
 
     Application& _app;
 
@@ -64,14 +64,14 @@ private:
     struct {
         VkBuffer buffer;
         VkDeviceMemory memory;
-    } vertices;
+    } _vertices;
 
     // Single index buffer for all primitives
     struct {
         int count;
         VkBuffer buffer;
         VkDeviceMemory memory;
-    } indices;
+    } _indices;
 
 private:
     tinygltf::Model _model;
