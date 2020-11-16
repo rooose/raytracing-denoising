@@ -2,10 +2,8 @@
 
 #include "Utils.hpp"
 #include "Character.hpp"
+#include "TextureModule.hpp"
 
-
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
 
 #include <cstdlib>
 #include <iostream>
@@ -13,12 +11,14 @@
 #include <stdexcept>
 #include <vector>
 
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
 
 constexpr uint32_t WINDOW_WIDTH = 800;
 constexpr uint32_t WINDOW_HEIGHT = 600;
 constexpr size_t MAX_FRAMES_IN_FLIGHT = 3;
 
-const std::string MODEL_PATH = "../../assets/models/sphere.obj";
+const std::string MODEL_PATH = "../../assets/models/viking_room.obj";
 const std::string TEXTURE_PATH = "../../assets/textures/colorful_studio_2k.hdr";
 
 const std::vector<const char*> deviceExtensions = {
@@ -88,12 +88,6 @@ private:
 
     void createDepthResources();
 
-    void createTextureImage();
-
-    void createTextureImageView();
-
-    void createTextureSampler();
-
     void loadModel();
 
     void createVertexBuffer();
@@ -112,7 +106,7 @@ private:
 
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 
-    VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
+    VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D);
 
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
@@ -181,6 +175,9 @@ private:
     std::vector<VkImageView> _swapchainImageViews;
     std::vector<VkFramebuffer> _swapchainFramebuffers;
 
+    std::vector<TextureModule> _textures;
+    std::vector<SamplerModule> _samplers;
+
     // Main Loop Variables
     std::vector<VkSemaphore> _imageAvailableSemaphores;
     std::vector<VkSemaphore> _renderFinishedSemaphores;
@@ -206,11 +203,6 @@ private:
     VkCommandPool _commandPool;
     std::vector<VkCommandBuffer> _commandBuffers;
 
-    VkImage _textureImage;
-    VkDeviceMemory _textureImageMemory;
-    VkImageView _textureImageView;
-    VkSampler _textureSampler;
-
     VkImage _depthImage;
     VkDeviceMemory _depthImageMemory;
     VkImageView _depthImageView;
@@ -219,4 +211,7 @@ private:
 #ifdef _DEBUG
     VkDebugUtilsMessengerEXT _debugMessenger;
 #endif
+
+    friend class TextureModule;
+    friend class SamplerModule;
 };
