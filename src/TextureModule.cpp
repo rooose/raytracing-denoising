@@ -6,20 +6,28 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+TextureModule::TextureModule(Application& app, SamplerModule& sampler)
+    : _app(app)
+    , _sampler(sampler)
+{
+}
+
 TextureModule::TextureModule(Application& app, SamplerModule& sampler, const std::string& filename, VkImageViewType viewType)
     : _app(app)
     , _sampler(sampler)
 {
-    loadTexture(filename);
-    _textureImageView = _app.createImageView(_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, viewType);
+    loadFromFile(filename, viewType);
 }
 
 TextureModule::~TextureModule()
 {
-    vkDestroyImageView(_app._device, _textureImageView, nullptr);
+    if (_loaded) {
 
-    vkDestroyImage(_app._device, _textureImage, nullptr);
-    vkFreeMemory(_app._device, _textureImageMemory, nullptr);
+        vkDestroyImageView(_app._device, _textureImageView, nullptr);
+
+        vkDestroyImage(_app._device, _textureImage, nullptr);
+        vkFreeMemory(_app._device, _textureImageMemory, nullptr);
+    }
 }
 
 VkWriteDescriptorSet TextureModule::getDescriptorSet(VkDescriptorSet dst, uint32_t binding)
@@ -43,14 +51,17 @@ VkWriteDescriptorSet TextureModule::getDescriptorSet(VkDescriptorSet dst, uint32
     return descriptorSet;
 }
 
-void TextureModule::loadTexture(const std::string& filename)
+void TextureModule::loadFromFile(const std::string& filename, VkImageViewType viewType)
 {
-    stbi_uc* pixels = stbi_load(filename.c_str(), &_width, &_height, &_nbChannels, STBI_rgb_alpha);
+    loadTexture(filename, viewType);
+}
 
-    if (!pixels) {
-        throw std::runtime_error("Failed to load texture image!");
-    }
+void TextureModule::loadFromBuffer(stbi_uc* pixels, uint32_t texWidth, uint32_t texHeight, VkImageViewType viewType)
+{
+    assert(pixels);
 
+    _width = texWidth;
+    _height = texHeight;
     VkDeviceSize imageSize = _width * _height * 4;
 
     VkBuffer stagingBuffer;
@@ -61,7 +72,6 @@ void TextureModule::loadTexture(const std::string& filename)
     vkMapMemory(_app._device, stagingBufferMemory, 0, imageSize, NULL, &data);
     memcpy(data, pixels, static_cast<size_t>(imageSize));
     vkUnmapMemory(_app._device, stagingBufferMemory);
-    stbi_image_free(pixels);
 
     _app.createImage(_width, _height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _textureImage, _textureImageMemory);
 
@@ -72,6 +82,20 @@ void TextureModule::loadTexture(const std::string& filename)
 
     vkDestroyBuffer(_app._device, stagingBuffer, nullptr);
     vkFreeMemory(_app._device, stagingBufferMemory, nullptr);
+
+    _textureImageView = _app.createImageView(_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, viewType);
+    _loaded = true;
+}
+
+void TextureModule::loadTexture(const std::string& filename, VkImageViewType viewType)
+{
+    stbi_uc* pixels = stbi_load(filename.c_str(), &_width, &_height, &_nbChannels, STBI_rgb_alpha);
+
+    if (!pixels) {
+        throw std::runtime_error("Failed to load texture image!");
+    }
+    loadFromBuffer(pixels, _width, _height, viewType);
+    stbi_image_free(pixels);
 }
 
 SamplerModule::SamplerModule(Application& app)

@@ -19,11 +19,6 @@
 
 #define GetTypeSizeInBytes(x) GetNumComponentsInType(x)
 
-
-
-#define TINYGLTF_NO_INCLUDE_STB_IMAGE
-#include <VulkanglTFModel.hpp>
-
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
@@ -156,11 +151,13 @@ void Application::initVulkan()
     createCommandPool();
     _samplers.emplace_back(*this);
     _textures.emplace_back(*this, _samplers[0], TEXTURE_PATH);
+    _models.emplace_back(*this);
+    _models[0].loadModel(MODEL_PATH, _indices, _vertices);
     // yeet Rose
-    loadModel();
+    //loadModel();
 
-    createVertexBuffer();
-    createIndexBuffer();
+    //createVertexBuffer();
+    //createIndexBuffer();
     createUniformBuffers();
     createDescriptorPool();
     createDescriptorSets();
@@ -263,15 +260,11 @@ void Application::cleanup()
 {
     _samplers.clear();
     _textures.clear();
+    _models.clear();
 
     cleanupSwapchain();
 
     vkDestroyDescriptorSetLayout(_device, _descriptorSetLayout, nullptr);
-    vkDestroyBuffer(_device, _indexBuffer, nullptr);
-    vkFreeMemory(_device, _indexBufferMemory, nullptr);
-
-    vkDestroyBuffer(_device, _vertexBuffer, nullptr);
-    vkFreeMemory(_device, _vertexBufferMemory, nullptr);
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroySemaphore(_device, _renderFinishedSemaphores[i], nullptr);
@@ -782,12 +775,18 @@ void Application::createGraphicsPipeline()
     dynamicState.dynamicStateCount = 0; //1;
     dynamicState.pDynamicStates = nullptr; //dynamicStates;
 
+    VkPushConstantRange pushConstantRange {};
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(glm::mat4);
+
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo {};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = &_descriptorSetLayout;
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
-    pipelineLayoutInfo.pPushConstantRanges = nullptr;
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
     if (vkCreatePipelineLayout(_device, &pipelineLayoutInfo, nullptr, &_pipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create pipeline layout!");
@@ -971,48 +970,6 @@ void Application::loadModel() {
     }
 }
 
-void Application::createVertexBuffer()
-{
-    VkDeviceSize bufferSize = sizeof(_vertices[0]) * _vertices.size();
-
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-
-    void* data;
-    vkMapMemory(_device, stagingBufferMemory, 0, bufferSize, NULL, &data);
-    memcpy(data, _vertices.data(), static_cast<size_t>(bufferSize));
-    vkUnmapMemory(_device, stagingBufferMemory);
-
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _vertexBuffer, _vertexBufferMemory);
-
-    copyBuffer(stagingBuffer, _vertexBuffer, bufferSize);
-
-    vkDestroyBuffer(_device, stagingBuffer, nullptr);
-    vkFreeMemory(_device, stagingBufferMemory, nullptr);
-}
-
-void Application::createIndexBuffer()
-{
-    VkDeviceSize bufferSize = sizeof(_indices[0]) * _indices.size();
-
-    VkBuffer stagingBuffer;
-    VkDeviceMemory staginBufferMemory;
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, staginBufferMemory);
-
-    void* data;
-    vkMapMemory(_device, staginBufferMemory, 0, bufferSize, NULL, &data);
-    memcpy(data, _indices.data(), static_cast<uint32_t>(bufferSize));
-    vkUnmapMemory(_device, staginBufferMemory);
-
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _indexBuffer, _indexBufferMemory);
-
-    copyBuffer(stagingBuffer, _indexBuffer, bufferSize);
-
-    vkDestroyBuffer(_device, stagingBuffer, nullptr);
-    vkFreeMemory(_device, staginBufferMemory, nullptr);
-}
-
 void Application::createUniformBuffers()
 {
     VkDeviceSize BufferSize = sizeof(UniformBufferObject);
@@ -1127,13 +1084,15 @@ void Application::createCommandBuffers()
 
         vkCmdBindPipeline(_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, _graphicsPipeline);
 
-        VkBuffer vertexBuffers[] = { _vertexBuffer };
+        /*VkBuffer vertexBuffers[] = { _vertexBuffer };
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(_commandBuffers[i], 0, 1, vertexBuffers, offsets);
         vkCmdBindIndexBuffer(_commandBuffers[i], _indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdBindDescriptorSets(_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &_descriptorSets[i], 0, nullptr);
+        vkCmdBindDescriptorSets(_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &_descriptorSets[i], 0, nullptr);*/
 
-        vkCmdDrawIndexed(_commandBuffers[i], static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
+        //vkCmdDrawIndexed(_commandBuffers[i], static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
+
+        _models[0].draw(_commandBuffers[i], _pipelineLayout, i);
 
         vkCmdEndRenderPass(_commandBuffers[i]);
 
@@ -1358,7 +1317,7 @@ void Application::updateUniformBuffer(uint32_t currentImage)
 
     UniformBufferObject ubo {};
     //ubo.model = glm::rotate(glm::mat4(1.f), glm::radians(45.f), glm::vec3(0.f, 0.f, 1.f));
-    ubo.model = glm::rotate(glm::mat4(1.f), time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
+    ubo.model =  glm::rotate(glm::mat4(1.f), time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
     ubo.view = _character.getViewMatrix();
     ubo.proj = glm::perspective(glm::radians(80.f), _swapchainExtent.width / (float)_swapchainExtent.height, 0.1f, 10.f);
     ubo.proj[1][1] *= -1;

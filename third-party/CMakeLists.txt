@@ -10,6 +10,6 @@ add_subdirectory(glm)
 
 add_subdirectory(tinyobjloader)
 
-set(GLI_TEST_ENABLE FALSE)
+set(GLI_TEST_ENABLE OFF)
 
 add_subdirectory(gli)

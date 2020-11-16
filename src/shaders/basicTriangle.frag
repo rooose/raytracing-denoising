@@ -17,8 +17,8 @@ layout(binding = 1) uniform sampler2D texSampler;
 
 layout(location = 0) out vec4 outColor;
 
-void main() {
-    vec3 I = normalize(fragPos);
+vec4 fullRelflexion() {
+	vec3 I = normalize(fragPos);
 	mat4 invvp = inverse(ubo.view);
 	vec4 reflection = invvp * vec4(reflect(I, fragNormal), 0.);
 	vec3 R = normalize(reflection.xyz);
@@ -31,6 +31,9 @@ void main() {
 	float l = theta / (2 * PI ) + 0.5;
 
 	vec2 coords = vec2(l, -h);
+	return texture(texSampler, coords);
+}
 
-	outColor = texture(texSampler, coords);
+void main() {
+    outColor = texture(texSampler, fragTexCoord);
 }

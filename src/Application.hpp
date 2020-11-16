@@ -3,6 +3,7 @@
 #include "Utils.hpp"
 #include "Character.hpp"
 #include "TextureModule.hpp"
+#include "gltfLoader.hpp"
 
 
 #include <cstdlib>
@@ -18,7 +19,7 @@ constexpr uint32_t WINDOW_WIDTH = 800;
 constexpr uint32_t WINDOW_HEIGHT = 600;
 constexpr size_t MAX_FRAMES_IN_FLIGHT = 3;
 
-const std::string MODEL_PATH = "../../assets/models/viking_room.obj";
+const std::string MODEL_PATH = "../../assets/models/scene.gltf";
 const std::string TEXTURE_PATH = "../../assets/textures/colorful_studio_2k.hdr";
 
 const std::vector<const char*> deviceExtensions = {
@@ -90,9 +91,9 @@ private:
 
     void loadModel();
 
-    void createVertexBuffer();
+    //void createVertexBuffer();
 
-    void createIndexBuffer();
+    //void createIndexBuffer();
 
     void createUniformBuffers();
 
@@ -155,7 +156,9 @@ private:
     VkDevice _device;
 
     Character _character;
-
+    std::vector<TextureModule> _textures;
+    std::vector<SamplerModule> _samplers;
+    std::vector<GltfLoader> _models;
 
     VkQueue _graphicsQueue;
     VkQueue _presentQueue;
@@ -175,8 +178,6 @@ private:
     std::vector<VkImageView> _swapchainImageViews;
     std::vector<VkFramebuffer> _swapchainFramebuffers;
 
-    std::vector<TextureModule> _textures;
-    std::vector<SamplerModule> _samplers;
 
     // Main Loop Variables
     std::vector<VkSemaphore> _imageAvailableSemaphores;
@@ -187,10 +188,10 @@ private:
     std::vector<Vertex> _vertices;
     std::vector<uint32_t> _indices;
 
-    VkBuffer _vertexBuffer;
-    VkDeviceMemory _vertexBufferMemory;
-    VkBuffer _indexBuffer;
-    VkDeviceMemory _indexBufferMemory;
+    //VkBuffer _vertexBuffer;
+    //VkDeviceMemory _vertexBufferMemory;
+    //VkBuffer _indexBuffer;
+    //VkDeviceMemory _indexBufferMemory;
 
     std::vector<VkBuffer> _uniformBuffers;
     std::vector<VkDeviceMemory> _uniformBuffersMemory;
@@ -214,4 +215,5 @@ private:
 
     friend class TextureModule;
     friend class SamplerModule;
+    friend class GltfLoader;
 };
