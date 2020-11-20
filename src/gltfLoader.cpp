@@ -16,6 +16,8 @@
 GltfLoader::GltfLoader(Application& app)
     : _app(app)
 {
+    _nbPrimitives = 0;
+    _nbGeometries = 0;
     //_samplers.emplace_back(app);
 }
 
@@ -193,6 +195,8 @@ void GltfLoader::loadNode(const tinygltf::Node& inputNode, const tinygltf::Model
     // If the node contains mesh data, we load vertices and indices from the buffers
     // In glTF this is done via accessors and buffer views
     if (inputNode.mesh > -1) {
+        _nbGeometries++;
+        size_t currNbPrimitives = 0;
         const tinygltf::Mesh mesh = input.meshes[inputNode.mesh];
         // Iterate through all primitives of this node's mesh
         for (size_t i = 0; i < mesh.primitives.size(); i++) {
@@ -200,6 +204,7 @@ void GltfLoader::loadNode(const tinygltf::Node& inputNode, const tinygltf::Model
             uint32_t firstIndex = static_cast<uint32_t>(indexBuffer.size());
             uint32_t vertexStart = static_cast<uint32_t>(vertexBuffer.size());
             uint32_t indexCount = 0;
+            currNbPrimitives++;
             // Vertices
             {
                 const float* positionBuffer = nullptr;
@@ -283,6 +288,10 @@ void GltfLoader::loadNode(const tinygltf::Node& inputNode, const tinygltf::Model
             primitive.materialIndex = glTFPrimitive.material;
             node.mesh.primitives.push_back(primitive);
         }
+
+        if (currNbPrimitives > _nbPrimitives) {
+            _nbPrimitives = currNbPrimitives;
+        }
     }
 }
 
@@ -342,3 +351,12 @@ void GltfLoader::draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLa
         drawNode(commandBuffer, pipelineLayout, currentFrame, *node.get());
     }
 }
+
+size_t GltfLoader::getNumberOfPrimitives() const
+{
+    return _nbPrimitives;
+}
+
+size_t GltfLoader::getNumberOfGeometries() const
+{
+    return _nbGeometries;
