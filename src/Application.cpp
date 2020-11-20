@@ -22,7 +22,6 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
-
 #define FPS_COUNTER_TOP 256
 
 uint8_t Application::_verbose = 0;
@@ -68,6 +67,7 @@ void Application::drawFrame()
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         throw std::runtime_error("Failed to acquire swap chain image!");
     }
+
 
     updateUniformBuffer(imageIndex);
 
@@ -128,7 +128,7 @@ void Application::initWindow()
     glfwSetWindowFocusCallback(_window, [](GLFWwindow* window, int focused) {
         auto app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
         app->getCharacter().onFocus(window, focused);
-        });
+    });
 }
 
 void Application::initVulkan()
@@ -152,14 +152,10 @@ void Application::initVulkan()
     _samplers.emplace_back(*this);
     _textures.emplace_back(*this, _samplers[0], TEXTURE_PATH);
     _models.emplace_back(*this);
-    _models[0].loadModel(MODEL_PATH, _indices, _vertices);
-    // yeet Rose
-    //loadModel();
-
-    //createVertexBuffer();
-    //createIndexBuffer();
+    _models[0].loadModel(MODEL_PATH);
     createUniformBuffers();
     createDescriptorPool();
+    _models[0].load(_indices, _vertices);
     createDescriptorSets();
     createCommandBuffers();
     createSemaphores();
@@ -183,6 +179,7 @@ void Application::createVKInstance()
     const char** glfwExtensions;
     glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
     std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+    extensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
 #ifdef _DEBUG
     if (!checkValidationLayerSupport()) {
@@ -236,9 +233,9 @@ void Application::mainLoop()
     auto startTime = std::chrono::high_resolution_clock::now();
 
     while (!glfwWindowShouldClose(_window)) {
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-    startTime = std::chrono::high_resolution_clock::now();
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+        startTime = std::chrono::high_resolution_clock::now();
         glfwPollEvents();
         _character.update(_window, time);
         drawFrame();
@@ -264,7 +261,8 @@ void Application::cleanup()
 
     cleanupSwapchain();
 
-    vkDestroyDescriptorSetLayout(_device, _descriptorSetLayout, nullptr);
+    vkDestroyDescriptorSetLayout(_device, _descriptorSetLayouts.matrices, nullptr);
+    vkDestroyDescriptorSetLayout(_device, _descriptorSetLayouts.textures, nullptr);
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroySemaphore(_device, _renderFinishedSemaphores[i], nullptr);
@@ -408,7 +406,6 @@ bool Application::isDeviceSuitable(VkPhysicalDevice device) const
 
     VkPhysicalDeviceFeatures supportedFeatures;
     vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
-
 
     return indices.isComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
 }
@@ -644,29 +641,27 @@ void Application::createImageViews()
 
 void Application::createDescriptorSetLayout()
 {
-    VkDescriptorSetLayoutBinding uboLayoutBinding {};
-    uboLayoutBinding.binding = 0;
-    uboLayoutBinding.descriptorCount = 1;
-    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-    uboLayoutBinding.pImmutableSamplers = nullptr;
+    VkDescriptorSetLayoutBinding setLayoutBinding {};
+    setLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    setLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    setLayoutBinding.binding = 0;
+    setLayoutBinding.descriptorCount = 1;
 
-    VkDescriptorSetLayoutBinding samplerLayoutBinding {};
-    samplerLayoutBinding.binding = 1;
-    samplerLayoutBinding.descriptorCount = 1;
-    samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-    samplerLayoutBinding.pImmutableSamplers = nullptr;
+    VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo {};
+    descriptorSetLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descriptorSetLayoutCreateInfo.bindingCount = 1;
+    descriptorSetLayoutCreateInfo.pBindings = &setLayoutBinding;
+    if (vkCreateDescriptorSetLayout(_device, &descriptorSetLayoutCreateInfo, nullptr, &_descriptorSetLayouts.matrices) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to allocate descriptor sert Layout!");
+    }
 
-    std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBinding };
+    setLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    setLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    setLayoutBinding.binding = 0;
+    setLayoutBinding.descriptorCount = 1;
 
-    VkDescriptorSetLayoutCreateInfo layoutInfo {};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-    layoutInfo.pBindings = bindings.data();
-
-    if (vkCreateDescriptorSetLayout(_device, &layoutInfo, nullptr, &_descriptorSetLayout) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create descriptor set layout!");
+    if (vkCreateDescriptorSetLayout(_device, &descriptorSetLayoutCreateInfo, nullptr, &_descriptorSetLayouts.textures) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to allocate descriptor sert Layout!");
     }
 }
 
@@ -780,11 +775,12 @@ void Application::createGraphicsPipeline()
     pushConstantRange.offset = 0;
     pushConstantRange.size = sizeof(glm::mat4);
 
+    std::array<VkDescriptorSetLayout, 2> setLayouts = { _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures };
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo {};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &_descriptorSetLayout;
+    pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(setLayouts.size());
+    pipelineLayoutInfo.pSetLayouts = setLayouts.data();
     pipelineLayoutInfo.pushConstantRangeCount = 1;
     pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
@@ -883,7 +879,7 @@ void Application::createFrameBuffers()
     _swapchainFramebuffers.resize(_swapchainImageViews.size());
 
     for (size_t i = 0; i < _swapchainImageViews.size(); i++) {
-        std::array<VkImageView,2> attachments = {
+        std::array<VkImageView, 2> attachments = {
             _swapchainImageViews[i],
             _depthImageView
         };
@@ -925,7 +921,8 @@ void Application::createDepthResources()
 }
 
 // Yeet Rose
-void Application::loadModel() {
+void Application::loadModel()
+{
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -934,18 +931,18 @@ void Application::loadModel() {
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str())) {
         throw std::runtime_error(warn + err);
     }
-    
-    std::unordered_map<Vertex, uint32_t> uniqueVertices{};
+
+    std::unordered_map<Vertex, uint32_t> uniqueVertices {};
 
     for (const auto& shape : shapes) {
         for (const auto& index : shape.mesh.indices) {
-            Vertex vertex{};
+            Vertex vertex {};
 
             vertex.pos = {
-            attrib.vertices[3 * index.vertex_index + 0],
-            attrib.vertices[3 * index.vertex_index + 1],
-            attrib.vertices[3 * index.vertex_index + 2]
-                    };
+                attrib.vertices[3 * index.vertex_index + 0],
+                attrib.vertices[3 * index.vertex_index + 1],
+                attrib.vertices[3 * index.vertex_index + 2]
+            };
 
             vertex.texCoord = {
                 attrib.texcoords[2 * index.texcoord_index + 0],
@@ -984,28 +981,35 @@ void Application::createUniformBuffers()
 
 void Application::createDescriptorPool()
 {
-    std::array<VkDescriptorPoolSize,2> poolSizes {};
-    poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSizes[0].descriptorCount = static_cast<uint32_t>(_swapchainImages.size());
+    VkDescriptorPoolSize uboDescriptorPoolSize {};
+    uboDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uboDescriptorPoolSize.descriptorCount = _swapchainImages.size();
 
-    poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[1].descriptorCount = static_cast<uint32_t>(_swapchainImages.size());
+    VkDescriptorPoolSize ImagesDescriptorPoolSize {};
+    ImagesDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    ImagesDescriptorPoolSize.descriptorCount = _textures.size();
+    for (auto model : _models) {
+        ImagesDescriptorPoolSize.descriptorCount += model._descriptorSets.size();
+    }
 
-
-    VkDescriptorPoolCreateInfo poolInfo {};
-    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-    poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = static_cast<uint32_t>(_swapchainImages.size());
-
-    if (vkCreateDescriptorPool(_device, &poolInfo, nullptr, &_descriptorPool) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create descriptor pool!");
+    std::vector<VkDescriptorPoolSize> poolSizes = {
+        uboDescriptorPoolSize, ImagesDescriptorPoolSize
+    };
+    // One set for matrices and one per model image/texture
+    const uint32_t maxSetCount = ImagesDescriptorPoolSize.descriptorCount + uboDescriptorPoolSize.descriptorCount;
+    VkDescriptorPoolCreateInfo descriptorPoolInfo {};
+    descriptorPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    descriptorPoolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+    descriptorPoolInfo.pPoolSizes = poolSizes.data();
+    descriptorPoolInfo.maxSets = maxSetCount;
+    if (vkCreateDescriptorPool(_device, &descriptorPoolInfo, nullptr, &_descriptorPool) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to allocate descriptor pools!");
     }
 }
 
 void Application::createDescriptorSets()
 {
-    std::vector<VkDescriptorSetLayout> layouts(_swapchainImages.size(), _descriptorSetLayout);
+    std::vector<VkDescriptorSetLayout> layouts(_swapchainImages.size(), _descriptorSetLayouts.matrices);
     VkDescriptorSetAllocateInfo allocInfo {};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = _descriptorPool;
@@ -1024,7 +1028,7 @@ void Application::createDescriptorSets()
         bufferInfo.range = VK_WHOLE_SIZE;
 
         std::vector<VkWriteDescriptorSet> descriptorWrites;
-        descriptorWrites.resize(1 + _textures.size());
+        descriptorWrites.resize(1);
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet = _descriptorSets[i];
         descriptorWrites[0].dstBinding = 0;
@@ -1035,12 +1039,26 @@ void Application::createDescriptorSets()
         descriptorWrites[0].pImageInfo = nullptr;
         descriptorWrites[0].pTexelBufferView = nullptr;
 
-        for (size_t j = 0; j < _textures.size(); j++) {
-            descriptorWrites[j + 1] = _textures[j].getDescriptorSet(_descriptorSets[i], j + 1);
-        }
-
         vkUpdateDescriptorSets(_device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }
+
+    std::vector<VkWriteDescriptorSet> descriptorWrites;
+    for (size_t j = 0; j < _models.size(); j++) {
+        for (size_t i = 0; i < _models[j]._textures.size(); i++) {
+            allocInfo.pSetLayouts = &_descriptorSetLayouts.textures;
+            allocInfo.descriptorSetCount = 1;
+            allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+            allocInfo.descriptorPool = _descriptorPool;
+            if (vkAllocateDescriptorSets(_device, &allocInfo, &_models[j]._descriptorSets[i]) != VK_SUCCESS) {
+                throw std::runtime_error("Failed to allocate descriptor sets!");
+            }
+
+            VkWriteDescriptorSet descriptorWrite = _models[j]._textures[i].getDescriptorSet(
+                _models[j]._descriptorSets[i], 0);
+            descriptorWrites.push_back(descriptorWrite);
+        }
+    }
+    vkUpdateDescriptorSets(_device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }
 
 void Application::createCommandBuffers()
@@ -1082,17 +1100,18 @@ void Application::createCommandBuffers()
 
         vkCmdBeginRenderPass(_commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+        vkCmdBindDescriptorSets(_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &_descriptorSets[i], 0, nullptr);
         vkCmdBindPipeline(_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, _graphicsPipeline);
 
         /*VkBuffer vertexBuffers[] = { _vertexBuffer };
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(_commandBuffers[i], 0, 1, vertexBuffers, offsets);
-        vkCmdBindIndexBuffer(_commandBuffers[i], _indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdBindDescriptorSets(_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &_descriptorSets[i], 0, nullptr);*/
+        vkCmdBindIndexBuffer(_commandBuffers[i], _indexBuffer, 0, VK_INDEX_TYPE_UINT32);*/
 
         //vkCmdDrawIndexed(_commandBuffers[i], static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
 
         _models[0].draw(_commandBuffers[i], _pipelineLayout, i);
+        vkCmdTraceRaysKHR()
 
         vkCmdEndRenderPass(_commandBuffers[i]);
 
@@ -1317,7 +1336,7 @@ void Application::updateUniformBuffer(uint32_t currentImage)
 
     UniformBufferObject ubo {};
     //ubo.model = glm::rotate(glm::mat4(1.f), glm::radians(45.f), glm::vec3(0.f, 0.f, 1.f));
-    ubo.model =  glm::rotate(glm::mat4(1.f), time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
+    ubo.model = glm::rotate(glm::mat4(1.f), time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
     ubo.view = _character.getViewMatrix();
     ubo.proj = glm::perspective(glm::radians(80.f), _swapchainExtent.width / (float)_swapchainExtent.height, 0.1f, 10.f);
     ubo.proj[1][1] *= -1;

@@ -2,7 +2,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 #define PI 3.1415926538
 
-layout(binding = 0) uniform UniformBufferObject {
+layout(set = 0, binding = 0) uniform UniformBufferObject {
     mat4 model;
     mat4 view;
     mat4 proj;
@@ -13,7 +13,7 @@ layout(location = 1) in vec2 fragTexCoord;
 layout(location = 2) in vec3 fragNormal;
 layout(location = 3) in vec3 fragPos;
 
-layout(binding = 1) uniform sampler2D texSampler;
+layout(set= 1, binding = 0) uniform sampler2D texSampler;
 
 layout(location = 0) out vec4 outColor;
 
@@ -32,8 +32,10 @@ vec4 fullRelflexion() {
 
 	vec2 coords = vec2(l, -h);
 	return texture(texSampler, coords);
+//	return vec4(coords, 0.,1.);
 }
 
 void main() {
     outColor = texture(texSampler, fragTexCoord);
+//	outColor = fullRelflexion();
 }

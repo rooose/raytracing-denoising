@@ -100,6 +100,7 @@ void TextureModule::loadTexture(const std::string& filename, VkImageViewType vie
 
 SamplerModule::SamplerModule(Application& app)
     : _app(app)
+
 {
     VkSamplerCreateInfo samplerInfo {};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;

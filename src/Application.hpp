@@ -15,15 +15,24 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <vulkan/vulkan_beta.h>
+
 constexpr uint32_t WINDOW_WIDTH = 800;
 constexpr uint32_t WINDOW_HEIGHT = 600;
-constexpr size_t MAX_FRAMES_IN_FLIGHT = 3;
+constexpr size_t MAX_FRAMES_IN_FLIGHT = 6;
 
-const std::string MODEL_PATH = "../../assets/models/scene.gltf";
+const std::string MODEL_PATH = "../../assets/models/ironman/scene.gltf";
 const std::string TEXTURE_PATH = "../../assets/textures/colorful_studio_2k.hdr";
 
 const std::vector<const char*> deviceExtensions = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+    VK_KHR_RAY_TRACING_EXTENSION_NAME,
+    VK_KHR_MAINTENANCE3_EXTENSION_NAME,
+    VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME, 
+    VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME, 
+    VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+    VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME, 
+    VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME
 };
 
 struct QueueFamilyIndices {
@@ -165,7 +174,10 @@ private:
     VkSwapchainKHR _swapchain;
 
     VkRenderPass _renderPass;
-    VkDescriptorSetLayout _descriptorSetLayout;
+    struct DescriptorSetLayouts {
+        VkDescriptorSetLayout matrices;
+        VkDescriptorSetLayout textures;
+    } _descriptorSetLayouts;
     VkPipelineLayout _pipelineLayout;
     VkPipeline _graphicsPipeline;
 

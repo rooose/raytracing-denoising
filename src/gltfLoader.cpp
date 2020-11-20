@@ -16,19 +16,20 @@
 GltfLoader::GltfLoader(Application& app)
     : _app(app)
 {
-    _samplers.emplace_back(app);
+    //_samplers.emplace_back(app);
 }
 
 GltfLoader::~GltfLoader()
 {
-    // Release all Vulkan resources allocated for the model
-    vkDestroyBuffer(_app._device, _vertices.buffer, nullptr);
-    vkFreeMemory(_app._device, _vertices.memory, nullptr);
-    vkDestroyBuffer(_app._device, _indices.buffer, nullptr);
-    vkFreeMemory(_app._device, _indices.memory, nullptr);
+    if (_loaded) {
+        vkDestroyBuffer(_app._device, _vertices.buffer, nullptr);
+        vkFreeMemory(_app._device, _vertices.memory, nullptr);
+        vkDestroyBuffer(_app._device, _indices.buffer, nullptr);
+        vkFreeMemory(_app._device, _indices.memory, nullptr);
+    }
 }
 
-tinygltf::Model& GltfLoader::loadModel(const std::string& fileName, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer)
+tinygltf::Model& GltfLoader::loadModel(const std::string& fileName)
 {
     bool ret = _loader.LoadASCIIFromFile(&_model, &_err, &_warn, fileName);
 
@@ -44,6 +45,46 @@ tinygltf::Model& GltfLoader::loadModel(const std::string& fileName, std::vector<
         throw std::runtime_error("Failed to parse glTF\n");
     }
 
+    _descriptorSets.resize(_model.images.size());
+    _textures.resize(_model.images.size(), TextureModule(_app, _app._samplers[0]));
+}
+
+void GltfLoader::loadImages(tinygltf::Model& input)
+{
+    // Images can be stored inside the glTF (which is the case for the sample model), so instead of directly
+    // loading them from disk, we fetch them from the glTF loader and upload the buffers
+    for (size_t i = 0; i < input.images.size(); i++) {
+        tinygltf::Image& glTFImage = input.images[i];
+        // Get the image data from the glTF loader
+        unsigned char* buffer = nullptr;
+        VkDeviceSize bufferSize = 0;
+        bool deleteBuffer = false;
+        // We convert RGB-only images to RGBA, as most devices don't support RGB-formats in Vulkan
+        if (glTFImage.component == 3) {
+            bufferSize = glTFImage.width * glTFImage.height * 4;
+            buffer = new unsigned char[bufferSize];
+            unsigned char* rgba = buffer;
+            unsigned char* rgb = &glTFImage.image[0];
+            for (size_t i = 0; i < glTFImage.width * glTFImage.height; ++i) {
+                memcpy(rgba, rgb, sizeof(unsigned char) * 3);
+                rgba += 4;
+                rgb += 3;
+            }
+            deleteBuffer = true;
+        } else {
+            buffer = &glTFImage.image[0];
+            bufferSize = glTFImage.image.size();
+        }
+        // Load texture from image buffer
+        _textures[i].loadFromBuffer(buffer, glTFImage.width, glTFImage.height);
+        if (deleteBuffer) {
+            delete buffer;
+        }
+    }
+}
+
+void GltfLoader::load(std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer)
+{
     loadImages(_model);
     loadMaterials(_model);
     loadTextures(_model);
@@ -91,41 +132,7 @@ tinygltf::Model& GltfLoader::loadModel(const std::string& fileName, std::vector<
 
     vkDestroyBuffer(_app._device, indexstagingBuffer, nullptr);
     vkFreeMemory(_app._device, indexstagingBufferMemory, nullptr);
-}
-
-void GltfLoader::loadImages(tinygltf::Model& input)
-{
-    // Images can be stored inside the glTF (which is the case for the sample model), so instead of directly
-    // loading them from disk, we fetch them from the glTF loader and upload the buffers
-    _textures.resize(input.images.size(), TextureModule(_app, _samplers[0]));
-    for (size_t i = 0; i < input.images.size(); i++) {
-        tinygltf::Image& glTFImage = input.images[i];
-        // Get the image data from the glTF loader
-        unsigned char* buffer = nullptr;
-        VkDeviceSize bufferSize = 0;
-        bool deleteBuffer = false;
-        // We convert RGB-only images to RGBA, as most devices don't support RGB-formats in Vulkan
-        if (glTFImage.component == 3) {
-            bufferSize = glTFImage.width * glTFImage.height * 4;
-            buffer = new unsigned char[bufferSize];
-            unsigned char* rgba = buffer;
-            unsigned char* rgb = &glTFImage.image[0];
-            for (size_t i = 0; i < glTFImage.width * glTFImage.height; ++i) {
-                memcpy(rgba, rgb, sizeof(unsigned char) * 3);
-                rgba += 4;
-                rgb += 3;
-            }
-            deleteBuffer = true;
-        } else {
-            buffer = &glTFImage.image[0];
-            bufferSize = glTFImage.image.size();
-        }
-        // Load texture from image buffer
-        _textures[i].loadFromBuffer(buffer, glTFImage.width, glTFImage.height);
-        if (deleteBuffer) {
-            delete buffer;
-        }
-    }
+    _loaded = true;
 }
 
 void GltfLoader::loadMaterials(tinygltf::Model& input)
@@ -302,28 +309,14 @@ void GltfLoader::drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pipeli
         bufferInfo.offset = 0;
         bufferInfo.range = VK_WHOLE_SIZE;
 
-        std::vector<VkWriteDescriptorSet> descriptorWrites;
-        descriptorWrites.resize(2);
-        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet = descriptorSet;
-        descriptorWrites[0].dstBinding = 0;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pBufferInfo = &bufferInfo;
-        descriptorWrites[0].pImageInfo = nullptr;
-        descriptorWrites[0].pTexelBufferView = nullptr;
-
         // Pass the final matrix to the vertex shader using push constants
         vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &nodeMatrix);
         for (const GltfLoader::Primitive& primitive : node.mesh.primitives) {
             if (primitive.indexCount > 0) {
                 // Get the texture index for this primitive
                 Texture texture = _textures_idx[_materials[primitive.materialIndex].baseColorTextureIndex];
-                descriptorWrites[1] = _textures[texture.imageIndex].getDescriptorSet(descriptorSet, 1);
-                vkUpdateDescriptorSets(_app._device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
                 // Bind the descriptor for the current primitive's texture
-                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &_descriptorSets[texture.imageIndex], 0, nullptr);
                 vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, 0);
             }
         }

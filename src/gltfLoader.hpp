@@ -41,8 +41,9 @@ public:
     GltfLoader(Application& app);
     ~GltfLoader();
 
-    tinygltf::Model& loadModel(const std::string& fileName, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);
+    tinygltf::Model& loadModel(const std::string& fileName);
     void loadImages(tinygltf::Model& input);
+    void load(std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);
     void loadNode(const tinygltf::Node& inputNode, const tinygltf::Model& input, GltfLoader::Node* parent, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);
     void drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, size_t currentFrame, GltfLoader::Node node);
     void draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, size_t currentFrame);
@@ -57,6 +58,7 @@ private:
     std::vector<SamplerModule> _samplers;
     std::vector<Material> _materials;
     std::vector<Node> _nodes;
+    std::vector<VkDescriptorSet> _descriptorSets;
 
     Application& _app;
 
@@ -78,4 +80,7 @@ private:
     tinygltf::TinyGLTF _loader;
     std::string _err;
     std::string _warn;
+    bool _loaded { false };
+
+    friend class Application;
 };
