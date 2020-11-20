@@ -70,6 +70,8 @@ private:
 
     void initVulkan();
 
+    void initRayTracing();
+
     void createVKInstance();
 
     void mainLoop();
@@ -99,10 +101,6 @@ private:
     void createDepthResources();
 
     void loadModel();
-
-    //void createVertexBuffer();
-
-    //void createIndexBuffer();
 
     void createUniformBuffers();
 
@@ -163,6 +161,7 @@ private:
     VkSurfaceKHR _surface;
     VkPhysicalDevice _physDevice { VK_NULL_HANDLE };
     VkDevice _device;
+
 
     Character _character;
     std::vector<TextureModule> _textures;
@@ -228,4 +227,5 @@ private:
     friend class TextureModule;
     friend class SamplerModule;
     friend class GltfLoader;
+    friend class RaytracingHandler;
 };

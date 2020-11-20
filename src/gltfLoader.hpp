@@ -49,6 +49,8 @@ public:
     void loadNode(const tinygltf::Node& inputNode, const tinygltf::Model& input, GltfLoader::Node* parent, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);
     void drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, size_t currentFrame, GltfLoader::Node node);
     void draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, size_t currentFrame);
+    size_t getNumberOfPrimitives() const;
+    size_t getNumberOfGeometries() const;
 
 private:
     void loadMaterials(tinygltf::Model& input);
@@ -61,6 +63,8 @@ private:
     std::vector<Material> _materials;
     std::vector<std::shared_ptr<Node>> _nodes; // TODO: Change to unique
     std::vector<VkDescriptorSet> _descriptorSets;
+    size_t _nbPrimitives;
+    size_t _nbGeometries;
 
     Application& _app;
 
@@ -85,4 +89,5 @@ private:
     bool _loaded { false };
 
     friend class Application;
+    friend class RaytracingHandler;
 };

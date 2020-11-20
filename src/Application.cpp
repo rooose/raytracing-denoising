@@ -161,6 +161,25 @@ void Application::initVulkan()
     createSemaphores();
 }
 
+void Application::initRayTracing()
+{
+    // Requesting ray tracing properties
+    // auto properties = _physDevice.getProperties2<VkPhysicalDeviceProperties2, VkPhysicalDeviceRayTracingPropertiesKHR>();
+    // _rtProperties = properties.get<VkPhysicalDeviceRayTracingPropertiesKHR>();
+
+    _rtProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_KHR;
+    VkPhysicalDeviceProperties2 deviceProps2{};
+    deviceProps2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+    deviceProps2.pNext = &_rtProperties;
+    vkGetPhysicalDeviceProperties2(_physDevice, &deviceProps2);
+
+    _rtFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_FEATURES_KHR;
+    VkPhysicalDeviceFeatures2 deviceFeatures2{};
+    deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    deviceFeatures2.pNext = &rayTracingFeatures;
+    vkGetPhysicalDeviceFeatures2(physicalDevice, &deviceFeatures2);
+}
+
 void Application::createVKInstance()
 {
     VkApplicationInfo appInfo {};
