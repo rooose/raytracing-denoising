@@ -1111,7 +1111,6 @@ void Application::createCommandBuffers()
         //vkCmdDrawIndexed(_commandBuffers[i], static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
 
         _models[0].draw(_commandBuffers[i], _pipelineLayout, i);
-        vkCmdTraceRaysKHR()
 
         vkCmdEndRenderPass(_commandBuffers[i]);
 
@@ -1338,7 +1337,7 @@ void Application::updateUniformBuffer(uint32_t currentImage)
     //ubo.model = glm::rotate(glm::mat4(1.f), glm::radians(45.f), glm::vec3(0.f, 0.f, 1.f));
     ubo.model = glm::rotate(glm::mat4(1.f), time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
     ubo.view = _character.getViewMatrix();
-    ubo.proj = glm::perspective(glm::radians(80.f), _swapchainExtent.width / (float)_swapchainExtent.height, 0.1f, 10.f);
+    ubo.proj = glm::perspective(glm::radians(80.f), _swapchainExtent.width / (float)_swapchainExtent.height, 0.1f, 200.f);
     ubo.proj[1][1] *= -1;
 
     void* data;

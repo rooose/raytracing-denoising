@@ -154,8 +154,18 @@ void GltfLoader::loadMaterials(tinygltf::Model& input)
 
 void GltfLoader::loadNode(const tinygltf::Node& inputNode, const tinygltf::Model& input, GltfLoader::Node* parent, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer)
 {
-    GltfLoader::Node node {};
-    node.matrix = glm::mat4(1.0f);
+    GltfLoader::Node* nodePtr {};
+    if (parent) {
+        parent->children.emplace_back(new GltfLoader::Node());
+        nodePtr = parent->children.back().get();
+        nodePtr->parent = parent;
+    } else {
+        _nodes.emplace_back(new GltfLoader::Node());
+        nodePtr = _nodes.back().get();
+        nodePtr->parent = nullptr;
+    }
+    GltfLoader::Node& node = *nodePtr;
+    node.matrix = glm::mat4(1.f);
 
     // Get the local node matrix
     // It's either made up from translation, rotation, scale or a 4x4 matrix
@@ -176,7 +186,7 @@ void GltfLoader::loadNode(const tinygltf::Node& inputNode, const tinygltf::Model
     // Load node's children
     if (inputNode.children.size() > 0) {
         for (size_t i = 0; i < inputNode.children.size(); i++) {
-            loadNode(input.nodes[inputNode.children[i]], input, &node, indexBuffer, vertexBuffer);
+            loadNode(input.nodes[inputNode.children[i]], input, nodePtr, indexBuffer, vertexBuffer);
         }
     }
 
@@ -274,12 +284,6 @@ void GltfLoader::loadNode(const tinygltf::Node& inputNode, const tinygltf::Model
             node.mesh.primitives.push_back(primitive);
         }
     }
-
-    if (parent) {
-        parent->children.push_back(node);
-    } else {
-        _nodes.push_back(node);
-    }
 }
 
 void GltfLoader::loadTextures(tinygltf::Model& input)
@@ -322,7 +326,7 @@ void GltfLoader::drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pipeli
         }
     }
     for (auto& child : node.children) {
-        drawNode(commandBuffer, pipelineLayout, currentFrame, child);
+        drawNode(commandBuffer, pipelineLayout, currentFrame, *child.get());
     }
 }
 
@@ -335,6 +339,6 @@ void GltfLoader::draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLa
     vkCmdBindIndexBuffer(commandBuffer, _indices.buffer, 0, VK_INDEX_TYPE_UINT32);
     // Render all nodes at top-level
     for (auto& node : _nodes) {
-        drawNode(commandBuffer, pipelineLayout, currentFrame, node);
+        drawNode(commandBuffer, pipelineLayout, currentFrame, *node.get());
     }
 }

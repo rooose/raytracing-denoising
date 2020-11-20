@@ -4,6 +4,8 @@
 #include "Utils.hpp"
 #include "tiny_gltf.h"
 
+#include <memory>
+
 class Application;
 
 class GltfLoader {
@@ -28,7 +30,7 @@ public:
     // A node represents an object in the glTF scene graph
     struct Node {
         Node* parent;
-        std::vector<Node> children;
+        std::vector < std::shared_ptr<Node>> children; // TODO : Change to unique
         Mesh mesh;
         glm::mat4 matrix;
     };
@@ -57,7 +59,7 @@ private:
     std::vector<Texture> _textures_idx;
     std::vector<SamplerModule> _samplers;
     std::vector<Material> _materials;
-    std::vector<Node> _nodes;
+    std::vector<std::shared_ptr<Node>> _nodes; // TODO: Change to unique
     std::vector<VkDescriptorSet> _descriptorSets;
 
     Application& _app;
