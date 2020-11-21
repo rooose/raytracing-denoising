@@ -27,6 +27,7 @@ class RaytracingHandler {
 public:
 	RaytracingHandler(Application& app);
 	~RaytracingHandler();
+	void init();
 
 	PFN_vkGetBufferDeviceAddressKHR vkGetBufferDeviceAddressKHR;
 	PFN_vkBindAccelerationStructureMemoryKHR vkBindAccelerationStructureMemoryKHR;
@@ -50,5 +51,11 @@ private:
 
 	void createBottomLevelAccelerationStructure();
 	void createTopLevelAccelerationStructure();
+	uint64_t getBufferDeviceAddress(VkBuffer buffer);
+	RayTracingObjectMemory createObjectMemory(VkAccelerationStructureKHR accelerationStructure);
+	RayTracingScratchBuffer createScratchBuffer(VkAccelerationStructureKHR accelerationStructure);
+	void deleteScratchBuffer(RayTracingScratchBuffer& scratchBuffer);
+	void deleteObjectMemory(RayTracingObjectMemory& objectMemory);
 
+	friend class Application;
 };

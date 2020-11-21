@@ -4,6 +4,7 @@
 #include "Character.hpp"
 #include "TextureModule.hpp"
 #include "gltfLoader.hpp"
+#include "RaytracingHandler.hpp"
 
 
 #include <cstdlib>
@@ -167,6 +168,7 @@ private:
     std::vector<TextureModule> _textures;
     std::vector<SamplerModule> _samplers;
     std::vector<GltfLoader> _models;
+    RaytracingHandler _rtHandler {*this};
 
     VkQueue _graphicsQueue;
     VkQueue _presentQueue;
@@ -174,11 +176,14 @@ private:
 
     VkRenderPass _renderPass;
     struct DescriptorSetLayouts {
-        VkDescriptorSetLayout matrices;
+        VkDescriptorSetLayout raytrace;
         VkDescriptorSetLayout textures;
     } _descriptorSetLayouts;
     VkPipelineLayout _pipelineLayout;
-    VkPipeline _graphicsPipeline;
+    VkPipeline _raycastPipeline;
+    
+    VkBuffer _shaderBindingTableBuffer;
+    VkDeviceMemory _shaderBindingTableMemory;
 
     // Parameters
     VkFormat _swapchainImageFormat;
@@ -188,6 +193,8 @@ private:
     std::vector<VkImage> _swapchainImages;
     std::vector<VkImageView> _swapchainImageViews;
     std::vector<VkFramebuffer> _swapchainFramebuffers;
+
+    std::vector<VkRayTracingShaderGroupCreateInfoKHR> _shaderGroups{};
 
 
     // Main Loop Variables
