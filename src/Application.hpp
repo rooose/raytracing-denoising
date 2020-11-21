@@ -89,6 +89,10 @@ private:
 
     void createImageViews();
 
+    void createStorageImage();
+
+    void createShaderBindingTable();
+
     void createDescriptorSetLayout();
 
     void createGraphicsPipeline();
@@ -121,7 +125,7 @@ private:
 
     void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 
-    void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+    void transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 
     void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
@@ -181,6 +185,15 @@ private:
     } _descriptorSetLayouts;
     VkPipelineLayout _pipelineLayout;
     VkPipeline _raycastPipeline;
+
+    struct StorageImage {
+        VkDeviceMemory memory;
+        VkImage image;
+        VkImageView view;
+        VkFormat format;
+    };
+
+    std::vector<StorageImage> _storageImages;
     
     VkBuffer _shaderBindingTableBuffer;
     VkDeviceMemory _shaderBindingTableMemory;

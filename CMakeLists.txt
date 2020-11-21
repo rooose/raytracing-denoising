@@ -7,7 +7,10 @@ set(CMAKE_CXX_STANDARD 20)
 file (GLOB_RECURSE SHADERS
     RELATIVE "${SOURCE_DIR}/src"
     "${SOURCE_DIR}src/shaders/*.vert"
-    "${SOURCE_DIR}src/shaders/*.frag")
+    "${SOURCE_DIR}src/shaders/*.frag"
+    "${SOURCE_DIR}src/shaders/*.rgen"
+    "${SOURCE_DIR}src/shaders/*.rmiss"
+    "${SOURCE_DIR}src/shaders/*.rchit")
 file(GLOB SOURCES
     "${SOURCE_DIR}src/*.cpp")
 file(GLOB HEADERS

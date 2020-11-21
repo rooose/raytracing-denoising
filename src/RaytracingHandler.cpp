@@ -20,6 +20,7 @@ void RaytracingHandler::init() {
     VkPhysicalDeviceProperties2 deviceProps2{};
     deviceProps2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
     deviceProps2.pNext = &_rtProperties;
+    deviceProps2.properties = {};
     vkGetPhysicalDeviceProperties2(_app._physDevice, &deviceProps2);
 
     _rtFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_FEATURES_KHR;
@@ -55,7 +56,7 @@ void RaytracingHandler::createBottomLevelAccelerationStructure()
     VkAccelerationStructureCreateGeometryTypeInfoKHR accelerationCreateGeometryInfo{};
     accelerationCreateGeometryInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
     accelerationCreateGeometryInfo.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-    accelerationCreateGeometryInfo.maxPrimitiveCount = _app._models[0].getNumberOfPrimitives();
+    accelerationCreateGeometryInfo.maxPrimitiveCount = static_cast<uint32_t>(_app._indices.size() / 3);
     accelerationCreateGeometryInfo.indexType = VK_INDEX_TYPE_UINT32;
     accelerationCreateGeometryInfo.maxVertexCount = static_cast<uint32_t>(_app._vertices.size());
     accelerationCreateGeometryInfo.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
@@ -65,7 +66,7 @@ void RaytracingHandler::createBottomLevelAccelerationStructure()
     accelerationCI.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
     accelerationCI.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
     accelerationCI.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-    accelerationCI.maxGeometryCount = _app._models[0].getNumberOfGeometries();
+    accelerationCI.maxGeometryCount = 1;
     accelerationCI.pGeometryInfos = &accelerationCreateGeometryInfo;
 
     if (vkCreateAccelerationStructureKHR(_app._device, &accelerationCI, nullptr, &bottomLevelAS.accelerationStructure) != VK_SUCCESS) {
@@ -86,7 +87,7 @@ void RaytracingHandler::createBottomLevelAccelerationStructure()
     VkAccelerationStructureGeometryKHR accelerationStructureGeometry{};
     accelerationStructureGeometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
     accelerationStructureGeometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
-    accelerationStructureGeometry.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+    accelerationStructureGeometry.geometryType = accelerationCreateGeometryInfo.geometryType;
     accelerationStructureGeometry.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
     accelerationStructureGeometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
     accelerationStructureGeometry.geometry.triangles.vertexData.deviceAddress = vertexBufferDeviceAddress.deviceAddress;
@@ -111,7 +112,7 @@ void RaytracingHandler::createBottomLevelAccelerationStructure()
     accelerationBuildGeometryInfo.scratchData.deviceAddress = scratchBuffer.deviceAddress;
 
     VkAccelerationStructureBuildOffsetInfoKHR accelerationBuildOffsetInfo{};
-    accelerationBuildOffsetInfo.primitiveCount = 1;
+    accelerationBuildOffsetInfo.primitiveCount = accelerationCreateGeometryInfo.maxPrimitiveCount;
     accelerationBuildOffsetInfo.primitiveOffset = 0x0;
     accelerationBuildOffsetInfo.firstVertex = 0;
     accelerationBuildOffsetInfo.transformOffset = 0x0;
@@ -145,14 +146,14 @@ void RaytracingHandler::createTopLevelAccelerationStructure()
     VkAccelerationStructureCreateGeometryTypeInfoKHR accelerationCreateGeometryInfo{};
     accelerationCreateGeometryInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
     accelerationCreateGeometryInfo.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
-    accelerationCreateGeometryInfo.maxPrimitiveCount = _app._models[0].getNumberOfPrimitives();
+    accelerationCreateGeometryInfo.maxPrimitiveCount = 1;
     accelerationCreateGeometryInfo.allowsTransforms = VK_FALSE;
 
     VkAccelerationStructureCreateInfoKHR accelerationCI{};
     accelerationCI.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
     accelerationCI.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
     accelerationCI.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-    accelerationCI.maxGeometryCount = _app._models[0].getNumberOfGeometries();
+    accelerationCI.maxGeometryCount = 1;
     accelerationCI.pGeometryInfos = &accelerationCreateGeometryInfo;
 
     if (vkCreateAccelerationStructureKHR(_app._device, &accelerationCI, nullptr, &topLevelAS.accelerationStructure) != VK_SUCCESS) {
@@ -259,7 +260,7 @@ uint64_t RaytracingHandler::getBufferDeviceAddress(VkBuffer buffer)
     VkBufferDeviceAddressInfoKHR bufferDeviceAI{};
     bufferDeviceAI.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
     bufferDeviceAI.buffer = buffer;
-    return vkGetBufferDeviceAddressKHR(_app._device, &bufferDeviceAI);
+    return this->vkGetBufferDeviceAddressKHR(_app._device, &bufferDeviceAI);
 }
 
 RayTracingObjectMemory RaytracingHandler::createObjectMemory(VkAccelerationStructureKHR accelerationStructure)
@@ -285,6 +286,8 @@ RayTracingObjectMemory RaytracingHandler::createObjectMemory(VkAccelerationStruc
     if (vkAllocateMemory(_app._device, &memoryAI, nullptr, &objectMemory.memory) != VK_SUCCESS) {
         throw std::runtime_error("Could not create object memory");
     }
+
+    return objectMemory;
 }
 
 RayTracingScratchBuffer RaytracingHandler::createScratchBuffer(VkAccelerationStructureKHR accelerationStructure)

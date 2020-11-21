@@ -113,7 +113,7 @@ void GltfLoader::load(std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& v
     memcpy(data, vertexBuffer.data(), static_cast<size_t>(vertexBufferSize));
     vkUnmapMemory(_app._device, vertexstagingBufferMemory);
 
-    _app.createBuffer(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _vertices.buffer, _vertices.memory);
+    _app.createBuffer(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _vertices.buffer, _vertices.memory);
 
     _app.copyBuffer(vertexstagingBuffer, _vertices.buffer, vertexBufferSize);
 
@@ -128,7 +128,7 @@ void GltfLoader::load(std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& v
     memcpy(data, indexBuffer.data(), static_cast<size_t>(indexBufferSize));
     vkUnmapMemory(_app._device, indexstagingBufferMemory);
 
-    _app.createBuffer(indexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _indices.buffer, _indices.memory);
+    _app.createBuffer(indexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _indices.buffer, _indices.memory);
 
     _app.copyBuffer(indexstagingBuffer, _indices.buffer, indexBufferSize);
 
@@ -360,3 +360,4 @@ size_t GltfLoader::getNumberOfPrimitives() const
 size_t GltfLoader::getNumberOfGeometries() const
 {
     return _nbGeometries;
+}
