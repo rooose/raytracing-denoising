@@ -156,6 +156,7 @@ void Application::initVulkan()
     _models[0].load(_indices, _vertices);
     _rtHandler.init();
     createGraphicsPipeline();
+    createShaderBindingTable();
     createUniformBuffers();
     createDescriptorPool();
     createDescriptorSets();
@@ -619,7 +620,7 @@ void Application::createSwapchain()
     createInfo.imageColorSpace = surfaceFormat.colorSpace;
     createInfo.imageExtent = extent;
     createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
     QueueFamilyIndices indices = findQueueFamilies(_physDevice);
     uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(),
@@ -707,16 +708,16 @@ void Application::createDescriptorSetLayout()
     uniformBufferBinding.descriptorCount = 1;
 
     VkDescriptorSetLayoutBinding accelerationStructureLayoutBinding {};
-    accelerationStructureLayoutBinding.binding = 1;
     accelerationStructureLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-    accelerationStructureLayoutBinding.descriptorCount = 1;
     accelerationStructureLayoutBinding.stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+    accelerationStructureLayoutBinding.binding = 1;
+    accelerationStructureLayoutBinding.descriptorCount = 1;
 
     VkDescriptorSetLayoutBinding resultImageLayoutBinding {};
-    resultImageLayoutBinding.binding = 2;
     resultImageLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    resultImageLayoutBinding.descriptorCount = 1;
     resultImageLayoutBinding.stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+    resultImageLayoutBinding.binding = 2;
+    resultImageLayoutBinding.descriptorCount = 1;
 
     std::array<VkDescriptorSetLayoutBinding, 3> bindings({
         uniformBufferBinding, accelerationStructureLayoutBinding,
@@ -995,29 +996,29 @@ void Application::createRenderPass()
     }
 }
 
-void Application::createFrameBuffers()
-{
-    _swapchainFramebuffers.resize(_swapchainImageViews.size());
-
-    for (size_t i = 0; i < _swapchainImageViews.size(); i++) {
-        std::array<VkImageView, 2> attachments = {
-            _swapchainImageViews[i],
-            _depthImageView
-        };
-        VkFramebufferCreateInfo framebufferInfo {};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = _renderPass;
-        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        framebufferInfo.pAttachments = attachments.data();
-        framebufferInfo.width = _swapchainExtent.width;
-        framebufferInfo.height = _swapchainExtent.height;
-        framebufferInfo.layers = 1;
-
-        if (vkCreateFramebuffer(_device, &framebufferInfo, nullptr, &_swapchainFramebuffers[i]) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create framebuffer!");
-        }
-    }
-}
+//void Application::createFrameBuffers()
+//{
+//    _swapchainFramebuffers.resize(_swapchainImageViews.size());
+//
+//    for (size_t i = 0; i < _swapchainImageViews.size(); i++) {
+//        std::array<VkImageView, 2> attachments = {
+//            _swapchainImageViews[i],
+//            _depthImageView
+//        };
+//        VkFramebufferCreateInfo framebufferInfo {};
+//        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+//        framebufferInfo.renderPass = _renderPass;
+//        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+//        framebufferInfo.pAttachments = attachments.data();
+//        framebufferInfo.width = _swapchainExtent.width;
+//        framebufferInfo.height = _swapchainExtent.height;
+//        framebufferInfo.layers = 1;
+//
+//        if (vkCreateFramebuffer(_device, &framebufferInfo, nullptr, &_swapchainFramebuffers[i]) != VK_SUCCESS) {
+//            throw std::runtime_error("Failed to create framebuffer!");
+//        }
+//    }
+//}
 
 void Application::createCommandPool()
 {
@@ -1108,7 +1109,7 @@ void Application::createDescriptorPool()
 
     VkDescriptorPoolSize asDescriptorPoolSize {};
     asDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-    asDescriptorPoolSize.descriptorCount = 1;
+    asDescriptorPoolSize.descriptorCount = _swapchainImages.size();
 
     VkDescriptorPoolSize storageImageDescriptorPoolSize {};
     storageImageDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -1116,16 +1117,16 @@ void Application::createDescriptorPool()
 
     VkDescriptorPoolSize ImagesDescriptorPoolSize {};
     ImagesDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    ImagesDescriptorPoolSize.descriptorCount = std::max(static_cast<size_t>(1), _textures.size());
+    ImagesDescriptorPoolSize.descriptorCount = _textures.size();
     for (auto model : _models) {
         ImagesDescriptorPoolSize.descriptorCount += model._descriptorSets.size();
     }
 
     std::vector<VkDescriptorPoolSize> poolSizes = {
-        uboDescriptorPoolSize, asDescriptorPoolSize, storageImageDescriptorPoolSize, ImagesDescriptorPoolSize
+        uboDescriptorPoolSize, asDescriptorPoolSize, ImagesDescriptorPoolSize
     };
-    // One set for raytracing and one per model image/texture
-    const uint32_t maxSetCount = 2;
+    // _swapchainImages.size() set for raytracing and one per model image/texture
+    const uint32_t maxSetCount = _swapchainImages.size() + ImagesDescriptorPoolSize.descriptorCount;
     VkDescriptorPoolCreateInfo descriptorPoolInfo {};
     descriptorPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     descriptorPoolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
@@ -1142,7 +1143,7 @@ void Application::createDescriptorSets()
     VkDescriptorSetAllocateInfo allocInfo {};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = _descriptorPool;
-    allocInfo.descriptorSetCount = static_cast<uint32_t>(_swapchainImages.size());
+    allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
     allocInfo.pSetLayouts = layouts.data();
 
     _descriptorSets.resize(_swapchainImages.size());
@@ -1198,7 +1199,7 @@ void Application::createDescriptorSets()
         vkUpdateDescriptorSets(_device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }
 
-    std::vector<VkWriteDescriptorSet> descriptorWrites;
+    /*std::vector<VkWriteDescriptorSet> descriptorWrites;
     for (size_t j = 0; j < _models.size(); j++) {
         for (size_t i = 0; i < _models[j]._textures.size(); i++) {
             allocInfo.pSetLayouts = &_descriptorSetLayouts.textures;
@@ -1214,12 +1215,12 @@ void Application::createDescriptorSets()
             descriptorWrites.push_back(descriptorWrite);
         }
     }
-    vkUpdateDescriptorSets(_device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+    vkUpdateDescriptorSets(_device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);*/
 }
 
 void Application::createCommandBuffers()
 {
-    _commandBuffers.resize(_swapchainFramebuffers.size());
+    _commandBuffers.resize(_swapchainImages.size());
 
     VkCommandBufferAllocateInfo allocInfo {};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -1319,7 +1320,7 @@ void Application::createCommandBuffers()
         // Transition ray tracing output image back to general layout
         transitionImageLayout(_commandBuffers[i], _storageImages[i].image, _storageImages[i].format, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
 
-        vkCmdEndRenderPass(_commandBuffers[i]);
+        //vkCmdEndRenderPass(_commandBuffers[i]);
 
         if (vkEndCommandBuffer(_commandBuffers[i]) != VK_SUCCESS) {
             throw std::runtime_error("Failed to record command buffer!");
@@ -1456,7 +1457,9 @@ void Application::createImage(uint32_t width, uint32_t height, VkFormat format, 
 
 void Application::transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
 {
+    bool isSingleCommandBuffer = false;
     if (!commandBuffer) {
+        isSingleCommandBuffer = true;
         commandBuffer = beginSingleTimeCommands();
     }
 
@@ -1528,6 +1531,7 @@ void Application::transitionImageLayout(VkCommandBuffer commandBuffer, VkImage i
     // Target layouts (new)
     // Destination access mask controls the dependency for the new image layout
     switch (newLayout) {
+    case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
     case VK_IMAGE_LAYOUT_GENERAL:
         barrier.dstAccessMask = NULL;   
         break;
@@ -1570,7 +1574,7 @@ void Application::transitionImageLayout(VkCommandBuffer commandBuffer, VkImage i
 
     vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, NULL, 0, nullptr, 0, nullptr, 1, &barrier); // TODO :FIX STAGE
 
-    if (!commandBuffer) {
+    if (isSingleCommandBuffer) {
         endSingleTimeCommands(commandBuffer);
     }
 }
@@ -1615,7 +1619,7 @@ void Application::recreateSwapchain()
     createRenderPass();
     createGraphicsPipeline();
     createDepthResources();
-    createFrameBuffers();
+    //createFrameBuffers();
     createUniformBuffers();
     createDescriptorPool();
     createDescriptorSets();

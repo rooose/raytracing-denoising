@@ -76,7 +76,7 @@ void TextureModule::loadFromBuffer(stbi_uc* pixels, uint32_t texWidth, uint32_t 
     _app.createImage(_width, _height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _textureImage, _textureImageMemory);
 
     _app.transitionImageLayout(nullptr, _textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    //_app.copyBufferToImage(stagingBuffer, _textureImage, static_cast<uint32_t>(_width), static_cast<uint32_t>(_height));
+    _app.copyBufferToImage(stagingBuffer, _textureImage, static_cast<uint32_t>(_width), static_cast<uint32_t>(_height));
 
     _app.transitionImageLayout(nullptr, _textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
