@@ -1649,10 +1649,11 @@ void Application::updateUniformBuffer(uint32_t currentImage)
     UniformBufferObject ubo {};
     //ubo.model = glm::rotate(glm::mat4(1.f), glm::radians(45.f), glm::vec3(0.f, 0.f, 1.f));
     //ubo.model = glm::rotate(glm::mat4(1.f), time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
-    ubo.model = glm::mat4({ 1.f, 0.f, 0.f, 0.f }, { 0.f, 0.f, 1.f, 0.f }, { 0.f, -1.f, 0.f, 0.f }, { 0.f, 0.f, 0.f, 1.f });
-    ubo.view = _character.getViewMatrix();
-    ubo.proj = glm::perspective(glm::radians(80.f), _swapchainExtent.width / (float)_swapchainExtent.height, 0.1f, 200.f);
-    ubo.proj[1][1] *= -1;
+    ubo.invView = glm::inverse(_character.getViewMatrix());
+    ubo.invProj = glm::perspective(glm::radians(80.f), _swapchainExtent.width / (float)_swapchainExtent.height, 0.1f, 200.f);
+    ubo.invProj[1][1] *= -1;
+    ubo.invProj = glm::inverse(ubo.invProj);
+
 
     void* data;
     vkMapMemory(_device, _uniformBuffersMemory[currentImage], 0, sizeof(ubo), NULL, &data);
