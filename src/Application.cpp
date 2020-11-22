@@ -149,7 +149,7 @@ void Application::initVulkan()
     //createDepthResources();
     //createFrameBuffers();
     _samplers.emplace_back(*this);
-    //_textures.emplace_back(*this, _samplers[0], TEXTURE_PATH);
+    _textures.emplace_back(*this, _samplers[0], TEXTURE_PATH);
     _models.emplace_back(*this);
     _models[0].loadModel(MODEL_PATH);
     createDescriptorSetLayout();
@@ -274,6 +274,17 @@ void Application::cleanup()
     }
 
     vkDestroyCommandPool(_device, _commandPool, nullptr);
+
+    for (auto storageImage : _storageImages) {
+        vkDestroyImageView(_device, storageImage.view, nullptr);
+        vkDestroyImage(_device, storageImage.image, nullptr);
+        vkFreeMemory(_device, storageImage.memory, nullptr);
+    }
+
+    _rtHandler.cleanupRaytracingHandler();
+
+    vkDestroyBuffer(_device, _shaderBindingTableBuffer, nullptr);
+    vkFreeMemory(_device, _shaderBindingTableMemory, nullptr);
 
     vkDestroyDevice(_device, nullptr);
 
@@ -643,7 +654,7 @@ void Application::createSwapchain()
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
     if (vkCreateSwapchainKHR(_device, &createInfo, nullptr, &_swapchain) != VK_SUCCESS) {
-        throw std::runtime_error("Failed  to craete swap chain!");
+        throw std::runtime_error("Failed  to create swap chain!");
     }
 
     vkGetSwapchainImagesKHR(_device, _swapchain, &imageCount, nullptr);
@@ -1118,13 +1129,15 @@ void Application::createDescriptorPool()
     VkDescriptorPoolSize ImagesDescriptorPoolSize {};
     ImagesDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     ImagesDescriptorPoolSize.descriptorCount = _textures.size();
-    for (auto model : _models) {
-        ImagesDescriptorPoolSize.descriptorCount += model._descriptorSets.size();
+
+    for (int i = 0; i < _models.size(); i++ ) {
+        ImagesDescriptorPoolSize.descriptorCount += _models[i]._descriptorSets.size();
     }
 
     std::vector<VkDescriptorPoolSize> poolSizes = {
         uboDescriptorPoolSize, asDescriptorPoolSize, ImagesDescriptorPoolSize
     };
+
     // _swapchainImages.size() set for raytracing and one per model image/texture
     const uint32_t maxSetCount = _swapchainImages.size() + ImagesDescriptorPoolSize.descriptorCount;
     VkDescriptorPoolCreateInfo descriptorPoolInfo {};
@@ -1615,10 +1628,10 @@ void Application::recreateSwapchain()
     cleanupSwapchain();
 
     createSwapchain();
-    createImageViews();
-    createRenderPass();
+    //createImageViews();
+    //createRenderPass();
     createGraphicsPipeline();
-    createDepthResources();
+    //createDepthResources();
     //createFrameBuffers();
     createUniformBuffers();
     createDescriptorPool();
@@ -1649,9 +1662,9 @@ void Application::updateUniformBuffer(uint32_t currentImage)
 
 void Application::cleanupSwapchain()
 {
-    vkDestroyImageView(_device, _depthImageView, nullptr);
-    vkDestroyImage(_device, _depthImage, nullptr);
-    vkFreeMemory(_device, _depthImageMemory, nullptr);
+    //vkDestroyImageView(_device, _depthImageView, nullptr);
+    //vkDestroyImage(_device, _depthImage, nullptr);
+    //vkFreeMemory(_device, _depthImageMemory, nullptr);
 
     for (auto framebuffer : _swapchainFramebuffers) {
         vkDestroyFramebuffer(_device, framebuffer, nullptr);
@@ -1666,11 +1679,11 @@ void Application::cleanupSwapchain()
 
     vkDestroyPipeline(_device, _raycastPipeline, nullptr);
     vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);
-    vkDestroyRenderPass(_device, _renderPass, nullptr);
+    //vkDestroyRenderPass(_device, _renderPass, nullptr);
 
-    for (auto imageView : _swapchainImageViews) {
-        vkDestroyImageView(_device, imageView, nullptr);
-    }
+    //for (auto imageView : _swapchainImageViews) {
+    //    vkDestroyImageView(_device, imageView, nullptr);
+    //}
 
     vkDestroySwapchainKHR(_device, _swapchain, nullptr);
 }

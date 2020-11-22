@@ -7,12 +7,7 @@ RaytracingHandler::RaytracingHandler(Application& app)
 }
 
 RaytracingHandler::~RaytracingHandler()
-{
-    vkDestroyAccelerationStructureKHR(_app._device, bottomLevelAS.accelerationStructure, nullptr);
-    vkDestroyAccelerationStructureKHR(_app._device, topLevelAS.accelerationStructure, nullptr);
-
-    deleteObjectMemory(bottomLevelAS.objectMemory);
-    deleteObjectMemory(topLevelAS.objectMemory);
+{ 
 }
 
 void RaytracingHandler::init() {
@@ -43,6 +38,15 @@ void RaytracingHandler::init() {
 
     createBottomLevelAccelerationStructure();
     createTopLevelAccelerationStructure();
+}
+
+void RaytracingHandler::cleanupRaytracingHandler()
+{
+    vkDestroyAccelerationStructureKHR(_app._device, bottomLevelAS.accelerationStructure, nullptr);
+    vkDestroyAccelerationStructureKHR(_app._device, topLevelAS.accelerationStructure, nullptr);
+
+    deleteObjectMemory(bottomLevelAS.objectMemory);
+    deleteObjectMemory(topLevelAS.objectMemory);
 }
 
 void RaytracingHandler::createBottomLevelAccelerationStructure()

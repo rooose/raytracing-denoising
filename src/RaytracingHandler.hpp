@@ -26,6 +26,7 @@ public:
     RaytracingHandler(Application& app);
     ~RaytracingHandler();
     void init();
+    void cleanupRaytracingHandler();
 
     PFN_vkGetBufferDeviceAddressKHR vkGetBufferDeviceAddressKHR;
     PFN_vkBindAccelerationStructureMemoryKHR vkBindAccelerationStructureMemoryKHR;
