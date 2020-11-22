@@ -199,6 +199,14 @@ void GltfLoader::loadNode(const tinygltf::Node& inputNode, const tinygltf::Model
         size_t currNbPrimitives = 0;
         const tinygltf::Mesh mesh = input.meshes[inputNode.mesh];
         // Iterate through all primitives of this node's mesh
+        glm::mat4 localMatrix = node.matrix;
+        Node* parent = node.parent;
+        while (parent) {
+            localMatrix = parent->matrix * localMatrix;
+            parent = parent->parent;
+        }
+
+
         for (size_t i = 0; i < mesh.primitives.size(); i++) {
             const tinygltf::Primitive& glTFPrimitive = mesh.primitives[i];
             uint32_t firstIndex = static_cast<uint32_t>(indexBuffer.size());
@@ -240,6 +248,12 @@ void GltfLoader::loadNode(const tinygltf::Node& inputNode, const tinygltf::Model
                     vert.normal = glm::normalize(glm::vec3(normalsBuffer ? glm::make_vec3(&normalsBuffer[v * 3]) : glm::vec3(0.0f)));
                     vert.texCoord = texCoordsBuffer ? glm::make_vec2(&texCoordsBuffer[v * 2]) : glm::vec3(0.0f);
                     vert.color = glm::vec3(1.0f);
+
+                    if (true) { // preTransform
+                        vert.pos = glm::vec3(localMatrix * glm::vec4(vert.pos, 1.0f));
+                        vert.normal = glm::normalize(glm::mat3(localMatrix) * vert.normal);
+                    }
+
                     vertexBuffer.push_back(vert);
                 }
             }
