@@ -38,4 +38,5 @@ namespace std {
 struct UniformBufferObject {
     glm::mat4 invView;
     glm::mat4 invProj;
+    glm::uint32 vertexSize;
 };

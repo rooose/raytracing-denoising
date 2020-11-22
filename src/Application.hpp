@@ -22,7 +22,7 @@ constexpr uint32_t WINDOW_WIDTH = 800;
 constexpr uint32_t WINDOW_HEIGHT = 600;
 constexpr size_t MAX_FRAMES_IN_FLIGHT = 6;
 
-const std::string MODEL_PATH = "../../assets/models/peach_castle/scene.gltf";
+const std::string MODEL_PATH = "../../assets/models/ironman/scene.gltf";
 const std::string TEXTURE_PATH = "../../assets/textures/colorful_studio_2k.hdr";
 
 const std::vector<const char*> deviceExtensions = {
@@ -95,7 +95,7 @@ private:
 
     void createDescriptorSetLayout();
 
-    void createGraphicsPipeline();
+    void createRaytracingPipeline();
 
     void createRenderPass();
 

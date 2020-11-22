@@ -235,11 +235,9 @@ void RaytracingHandler::createTopLevelAccelerationStructure()
 
     if (_rtFeatures.rayTracingHostAccelerationStructureCommands)
     {
-        
         if (vkBuildAccelerationStructureKHR(_app._device, 1, &accelerationBuildGeometryInfo, accelerationBuildOffsets.data()) != VK_SUCCESS) {
             throw std::runtime_error("Could not build acceleration structure for top level");
         }
-
     }
     else
     {
