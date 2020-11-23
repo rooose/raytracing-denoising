@@ -247,7 +247,7 @@ void GltfLoader::loadNode(const tinygltf::Node& inputNode, const tinygltf::Model
                     vert.pos = glm::vec4(glm::make_vec3(&positionBuffer[v * 3]), 1.0f);
                     vert.normal = glm::normalize(glm::vec3(normalsBuffer ? glm::make_vec3(&normalsBuffer[v * 3]) : glm::vec3(0.0f)));
                     vert.texCoord = texCoordsBuffer ? glm::make_vec2(&texCoordsBuffer[v * 2]) : glm::vec3(0.0f);
-                    vert.color = glm::vec3(1.0f);
+                    vert.color = glm::vec4(1.0f);
 
                     if (true) { // preTransform
                         vert.pos = glm::vec3(localMatrix * glm::vec4(vert.pos, 1.0f));

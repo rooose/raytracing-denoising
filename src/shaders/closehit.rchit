@@ -23,7 +23,7 @@ layout(binding = 0, set = 1) uniform sampler2D texSampler;
 struct Vertex
 {
     vec3 pos;
-    vec3 color;
+    vec4 color;
     vec3 normal;
     vec2 texCoord;
  };
@@ -41,9 +41,9 @@ Vertex unpack(uint index)
 
 	Vertex v;
 	v.pos = d0.xyz;
-	v.normal = vec3(d0.w, d1.x, d1.y);
-	v.color = vec3(d2.x, d2.y, d2.z);
-	v.texCoord = vec2(d3.x, d3.y);
+	v.color = vec4(d0.w, d1.x, d1.y, d1.z);
+	v.normal  = vec3(d1.w, d2.x, d2.y);
+	v.texCoord = vec2(d2.z, d2.w);
 
 	return v;
 }
@@ -59,9 +59,11 @@ void main()
 	// Interpolate normal
 	const vec3 barycentricCoords = vec3(1.0f - attribs.x - attribs.y, attribs.x, attribs.y);
 	vec3 normal = normalize(v0.normal * barycentricCoords.x + v1.normal * barycentricCoords.y + v2.normal * barycentricCoords.z);
+	vec4 color = normalize(v0.color * barycentricCoords.x + v1.color * barycentricCoords.y + v2.color * barycentricCoords.z);
 
 	// Interpolate for texture
-	vec2 textCoords = (v0.texCoord * barycentricCoords.x + v1.texCoord * barycentricCoords.y + v2.texCoord * barycentricCoords.z) / length(barycentricCoords);
+	vec2 textCoords = (v0.texCoord * barycentricCoords.x + v1.texCoord * barycentricCoords.y + v2.texCoord * barycentricCoords.z);
+//	vec2 texCoords = 
 
 	// Basic lighting
 	//	vec3 lightVector = normalize(ubo.lightPos.xyz);
@@ -79,5 +81,8 @@ void main()
 	//		hitValue *= 0.3;
 	//	}
 
+//	hitValue = vec3(textCoords, 0.);
 	hitValue = texture(texSampler, textCoords).xyz;
+//	hitValue = texture(texSampler, v0.texCoord).xyz;
+//	hitValue = color.xyz;
 }
