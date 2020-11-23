@@ -11,17 +11,23 @@
 #include <vector>
 #include <array>
 
+struct Buffer {
+    VkBuffer buffer;
+    VkDeviceMemory memory;
+};
+
 struct Vertex {
     glm::vec3 pos;
     glm::vec4 color;
     glm::vec3 normal;
     glm::vec2 texCoord;
+    glm::vec4 materialId;
 
     static VkVertexInputBindingDescription getBindingDescription();
-    static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions();
+    static std::array<VkVertexInputAttributeDescription, 5> getAttributeDescriptions();
 
     bool operator==(const Vertex& other) const {
-        return pos == other.pos && color == other.color && texCoord == other.texCoord;
+        return pos == other.pos && color == other.color && texCoord == other.texCoord && materialId == other.materialId;
     }
 };
 

@@ -17,8 +17,14 @@ layout(binding = 0, set = 0) uniform UBO
 layout(binding = 1, set = 0) uniform accelerationStructureEXT topLevelAS;
 layout(binding = 3, set = 0) buffer Vertices { vec4 v[]; } vertices;
 layout(binding = 4, set = 0) buffer Indices { uint i[]; } indices;
+layout(binding = 5, set = 0) uniform Material 
+{ 
+	vec4 baseColorFactor;
+	int baseColorTextureIndex;
+} materials[];
 
-layout(binding = 0, set = 1) uniform sampler2D texSampler;
+
+layout(binding = 0, set = 1) uniform sampler2D texSamplers[];
 
 struct Vertex
 {
@@ -26,6 +32,7 @@ struct Vertex
     vec4 color;
     vec3 normal;
     vec2 texCoord;
+	int materialId;
  };
 
 Vertex unpack(uint index)
@@ -44,6 +51,7 @@ Vertex unpack(uint index)
 	v.color = vec4(d0.w, d1.x, d1.y, d1.z);
 	v.normal  = vec3(d1.w, d2.x, d2.y);
 	v.texCoord = vec2(d2.z, d2.w);
+	v.materialId = int(d3.x);
 
 	return v;
 }
@@ -81,8 +89,10 @@ void main()
 	//		hitValue *= 0.3;
 	//	}
 
+//	hitValue = vec3(materials[v0.materialId].baseColorTextureIndex/10., 0., 0.);
+
 //	hitValue = vec3(textCoords, 0.);
-	hitValue = texture(texSampler, textCoords).xyz;
+	hitValue = texture(texSamplers[materials[v0.materialId].baseColorTextureIndex], textCoords).xyz;
 //	hitValue = texture(texSampler, v0.texCoord).xyz;
 //	hitValue = color.xyz;
 }
