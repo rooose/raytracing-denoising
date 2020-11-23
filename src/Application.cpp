@@ -108,7 +108,7 @@ void Application::drawFrame()
         _framebufferResized = false;
         recreateSwapchain();
     } else if (result != VK_SUCCESS) {
-        throw std::runtime_error("Fialed to present swap chain image!");
+        throw std::runtime_error("Failed to present swap chain image!");
     }
 
     _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
@@ -1525,6 +1525,7 @@ void Application::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t wid
 void Application::recreateSwapchain()
 {
     int width = 0, height = 0;
+
     glfwGetFramebufferSize(_window, &width, &height);
     while (width == 0 || height == 0) {
         glfwGetFramebufferSize(_window, &width, &height);
@@ -1532,10 +1533,20 @@ void Application::recreateSwapchain()
     }
 
     vkDeviceWaitIdle(_device);
-
     cleanupSwapchain();
 
+    // destroy storage images
+    for (auto storageImage : _storageImages) {
+        vkDestroyImageView(_device, storageImage.view, nullptr);
+        vkDestroyImage(_device, storageImage.image, nullptr);
+        vkFreeMemory(_device, storageImage.memory, nullptr);
+    }
+
     createSwapchain();
+
+    //recreateStorageImages
+    createStorageImage();
+    
     createRaytracingPipeline();
     createUniformBuffers();
     createDescriptorPool();
