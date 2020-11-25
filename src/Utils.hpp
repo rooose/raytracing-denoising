@@ -31,6 +31,12 @@ struct Vertex {
     }
 };
 
+struct Light {
+    glm::vec3 pos;
+    glm::vec4 color;
+    float intensity;
+};
+
 namespace std {
     template<> struct hash<Vertex> {
         size_t operator()(Vertex const& vertex) const {
@@ -45,4 +51,5 @@ struct UniformBufferObject {
     glm::mat4 invView;
     glm::mat4 invProj;
     glm::uint32 vertexSize;
+    glm::vec4 lights[4];
 };

@@ -151,6 +151,7 @@ void Application::initVulkan()
     _models[0].load(_indices, _vertices);
     _rtHandler.init();
     createUniformBuffers();
+    createModelsUniforms();
     createDescriptorSetLayout();
     createRaytracingPipeline();
     createShaderBindingTable();
@@ -259,6 +260,11 @@ void Application::cleanup()
     _models.clear();
 
     cleanupSwapchain();
+
+    //for (size_t i = 0; i < _swapchainImages.size(); i++) {
+    //    vkDestroyBuffer(_device, _uniformBuffers[i], nullptr);
+    //    vkFreeMemory(_device, _uniformBuffersMemory[i], nullptr);
+    //}
 
     vkDestroyDescriptorSetLayout(_device, _descriptorSetLayouts.raytrace, nullptr);
     vkDestroyDescriptorSetLayout(_device, _descriptorSetLayouts.textures, nullptr);
@@ -674,6 +680,73 @@ void Application::createImageViews()
     }
 }
 
+void Application::createModelsUniforms()
+{
+    VkDeviceSize BufferSize = sizeof(GltfLoader::Material);
+    const size_t nbMaterials = _models[0]._materials.size() * _swapchainImages.size();
+    _materialBuffers.resize(nbMaterials);
+
+    for (size_t i = 0; i < nbMaterials; i++) {
+        createBuffer(BufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, _materialBuffers[i].buffer, _materialBuffers[i].memory); // TODO : delete
+    }
+
+    for (size_t i = 0; i < _models[0]._materials.size(); i++) {
+        for (size_t j = 0; j < _swapchainImages.size(); j++) {
+            void* data;
+            vkMapMemory(_device, _materialBuffers[i * _swapchainImages.size() + j].memory, 0, sizeof(_models[0]._materials[i]), NULL, &data);
+            memcpy(data, &_models[0]._materials[i], sizeof(_models[0]._materials[i]));
+            vkUnmapMemory(_device, _materialBuffers[i * _swapchainImages.size() + j].memory);
+        }
+    }
+
+    // Lights
+    VkDeviceSize LightBufferSize = sizeof(Light);
+    Light newLight1 = Light{};
+    newLight1.pos = glm::vec3(-100, 100, 0);
+    newLight1.color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+    newLight1.intensity = 1.0f;
+
+    Light newLight2 = Light{};
+    newLight2.pos = glm::vec3(100, 100, 0);
+    newLight2.color = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
+    newLight2.intensity = 1.0f;
+
+    Light newLight3 = Light{};
+    newLight3.pos = glm::vec3(100, -100, 0);
+    newLight3.color = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
+    newLight3.intensity = 1.0f;
+
+    Light newLight4 = Light{};
+    newLight4.pos = glm::vec3(-100, -100, 0);
+    newLight4.color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    newLight4.intensity = 1.0f;
+
+    _lights.push_back(newLight1);
+    _lights.push_back(newLight2);
+    _lights.push_back(newLight3);
+    _lights.push_back(newLight4);
+
+    int nbLights = 4;
+    _lightsBuffer.resize(nbLights * _swapchainImages.size()); // lol
+
+    for (size_t i = 0; i < nbLights; i++) {
+        createBuffer(LightBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, _lightsBuffer[i].buffer, _lightsBuffer[i].memory); // TODO : delete
+    }
+
+    for (size_t i = 0; i < _lights.size(); i++) {
+        for (size_t j = 0; j < _swapchainImages.size(); j++) {
+            void* data;
+            vkMapMemory(_device, _lightsBuffer[i * _swapchainImages.size() + j].memory, 0, sizeof(_lights[i]), NULL, &data);
+            memcpy(data, &_lights[i], sizeof(_lights[i]));
+            vkUnmapMemory(_device, _lightsBuffer[i * _swapchainImages.size() + j].memory);
+        }
+    }
+}
+
+void Application::deleteModelsUniforms()
+{
+}
+
 void Application::createStorageImage()
 {
     _storageImages.resize(_swapchainImages.size());
@@ -750,13 +823,20 @@ void Application::createDescriptorSetLayout()
     materialsLayoutBiding.binding = 5;
     materialsLayoutBiding.descriptorCount = _models[0]._materials.size();
 
-    std::array<VkDescriptorSetLayoutBinding, 6> bindings({
+    VkDescriptorSetLayoutBinding lightsLayoutBinding{};
+    lightsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    lightsLayoutBinding.stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+    lightsLayoutBinding.binding = 6;
+    lightsLayoutBinding.descriptorCount = _lightsBuffer.size();
+
+    std::array<VkDescriptorSetLayoutBinding, 7> bindings({
         uniformBufferBinding,
         accelerationStructureLayoutBinding,
         resultImageLayoutBinding,
         verticesLayoutBinding,
         indicesLayoutBinding,
-        materialsLayoutBiding
+        materialsLayoutBiding,
+        lightsLayoutBinding
     });
 
     VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo {};
@@ -949,22 +1029,6 @@ void Application::createUniformBuffers()
     for (size_t i = 0; i < _swapchainImages.size(); i++) {
         createBuffer(BufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, _uniformBuffers[i], _uniformBuffersMemory[i]);
     }
-
-    const size_t nbMaterials = _models[0]._materials.size() * _swapchainImages.size();
-    _materialBuffers.resize(nbMaterials);
-
-    for (size_t i = 0; i < nbMaterials; i++) {
-        createBuffer(BufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, _materialBuffers[i].buffer, _materialBuffers[i].memory); // TODO : delete
-    }
-
-    for (size_t i = 0; i < _models[0]._materials.size(); i++) {
-        for (size_t j = 0; j < _swapchainImages.size(); j++) {
-            void* data;
-            vkMapMemory(_device, _materialBuffers[i * _swapchainImages.size() + j].memory, 0, sizeof(_models[0]._materials[i]), NULL, &data);
-            memcpy(data, &_models[0]._materials[i], sizeof(_models[0]._materials[i]));
-            vkUnmapMemory(_device, _materialBuffers[i * _swapchainImages.size() + j].memory);
-        }
-    }
 }
 
 void Application::createDescriptorPool()
@@ -997,6 +1061,10 @@ void Application::createDescriptorPool()
     matDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     matDescriptorPoolSize.descriptorCount = _materialBuffers.size();
 
+    VkDescriptorPoolSize lightsDescriptorPoolSize{};
+    lightsDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    lightsDescriptorPoolSize.descriptorCount = _lightsBuffer.size();
+
   /*  for (int i = 0; i < _models.size(); i++) {
         ImagesDescriptorPoolSize.descriptorCount += _models[i]._descriptorSets.size();
     }*/
@@ -1008,7 +1076,8 @@ void Application::createDescriptorPool()
         VertexBufferDescriptorPoolSize,
         IndexBufferDescriptorPoolSize,
         ImagesDescriptorPoolSize,
-        matDescriptorPoolSize
+        matDescriptorPoolSize,
+        lightsDescriptorPoolSize
     };
 
     // _swapchainImages.size() set for raytracing and one per model image/texture
@@ -1072,6 +1141,7 @@ void Application::createDescriptorSets()
         descriptorWrites[1].descriptorCount = 1;
         descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 
+        // Storage image info
         VkDescriptorImageInfo storageImageDescriptor {};
         storageImageDescriptor.imageView = _storageImages[i].view;
         storageImageDescriptor.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -1086,6 +1156,7 @@ void Application::createDescriptorSets()
         descriptorWrites[2].pImageInfo = &storageImageDescriptor;
         descriptorWrites[2].pTexelBufferView = nullptr;
 
+        // Vertex buffer
         VkDescriptorBufferInfo vertexBufferDescriptor {};
         vertexBufferDescriptor.buffer = _models[0]._vertices.buffer;
         vertexBufferDescriptor.range = VK_WHOLE_SIZE;
@@ -1100,6 +1171,7 @@ void Application::createDescriptorSets()
         descriptorWrites[3].pImageInfo = nullptr;
         descriptorWrites[3].pTexelBufferView = nullptr;
 
+        // Index buffer
         VkDescriptorBufferInfo indexBufferDescriptor {};
         indexBufferDescriptor.buffer = _models[0]._indices.buffer;
         indexBufferDescriptor.range = VK_WHOLE_SIZE;
@@ -1114,6 +1186,7 @@ void Application::createDescriptorSets()
         descriptorWrites[4].pImageInfo = nullptr;
         descriptorWrites[4].pTexelBufferView = nullptr;
 
+        // Material Buffer
         std::vector<VkDescriptorBufferInfo> matBufferDescriptors;
         matBufferDescriptors.resize(_models[0]._materials.size());
         for (size_t j = 0; j < _models[0]._materials.size(); j++) {
@@ -1130,6 +1203,23 @@ void Application::createDescriptorSets()
         descriptorWrites[5].pBufferInfo = matBufferDescriptors.data();
         descriptorWrites[5].pImageInfo = nullptr;
         descriptorWrites[5].pTexelBufferView = nullptr;
+
+        std::vector<VkDescriptorBufferInfo> lightsBufferDescriptors;
+        lightsBufferDescriptors.resize(_lightsBuffer.size());
+        for (size_t j = 0; j < _lightsBuffer.size(); j++) {
+            lightsBufferDescriptors[j].buffer = _materialBuffers[i + j * _swapchainImages.size()].buffer;
+            lightsBufferDescriptors[j].range = VK_WHOLE_SIZE;
+        }
+
+        descriptorWrites[6].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[6].dstSet = _descriptorSets[i];
+        descriptorWrites[6].dstBinding = 6;
+        descriptorWrites[6].dstArrayElement = 0;
+        descriptorWrites[6].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrites[6].descriptorCount = static_cast<uint32_t>(lightsBufferDescriptors.size());
+        descriptorWrites[6].pBufferInfo = lightsBufferDescriptors.data();
+        descriptorWrites[6].pImageInfo = nullptr;
+        descriptorWrites[6].pTexelBufferView = nullptr;
 
         vkUpdateDescriptorSets(_device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }

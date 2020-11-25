@@ -22,7 +22,7 @@ constexpr uint32_t WINDOW_WIDTH = 800;
 constexpr uint32_t WINDOW_HEIGHT = 600;
 constexpr size_t MAX_FRAMES_IN_FLIGHT = 6;
 
-const std::string MODEL_PATH = "../../assets/models/peach_castle/scene.gltf";
+const std::string MODEL_PATH = "../../assets/models/ironman/scene.gltf";
 const std::string TEXTURE_PATH = "../../assets/textures/colorful_studio_2k.hdr";
 
 const std::vector<const char*> deviceExtensions = {
@@ -71,8 +71,6 @@ private:
 
     void initVulkan();
 
-    void initRayTracing();
-
     void createVKInstance();
 
     void mainLoop();
@@ -88,6 +86,10 @@ private:
     void createSwapchain();
 
     void createImageViews();
+
+    void createModelsUniforms();
+
+    void deleteModelsUniforms();
 
     void createStorageImage();
 
@@ -191,6 +193,9 @@ private:
 
     std::vector<StorageImage> _storageImages;
     std::vector<Buffer> _materialBuffers;
+
+    std::vector<Buffer> _lightsBuffer;
+    std::vector<Light> _lights;
 
     VkBuffer _shaderBindingTableBuffer;
     VkDeviceMemory _shaderBindingTableMemory;
