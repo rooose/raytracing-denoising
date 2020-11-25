@@ -54,8 +54,8 @@ void RaytracingHandler::createBottomLevelAccelerationStructure()
     VkDeviceOrHostAddressConstKHR vertexBufferDeviceAddress{};
     VkDeviceOrHostAddressConstKHR indexBufferDeviceAddress{};
 
-    vertexBufferDeviceAddress.deviceAddress = getBufferDeviceAddress(_app._models[0]._vertices.buffer);
-    indexBufferDeviceAddress.deviceAddress = getBufferDeviceAddress(_app._models[0]._indices.buffer);
+    vertexBufferDeviceAddress.deviceAddress = getBufferDeviceAddress(_app._models[0]->_vertices.buffer);
+    indexBufferDeviceAddress.deviceAddress = getBufferDeviceAddress(_app._models[0]->_indices.buffer);
 
     VkAccelerationStructureCreateGeometryTypeInfoKHR accelerationCreateGeometryInfo{};
     accelerationCreateGeometryInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;

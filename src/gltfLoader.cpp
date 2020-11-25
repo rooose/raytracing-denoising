@@ -96,6 +96,11 @@ void GltfLoader::load(std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& v
         loadNode(node, _model, nullptr, indexBuffer, vertexBuffer);
     }
 
+
+}
+
+void GltfLoader::createBuffers(std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer)
+{
     // Create and upload vertex and index buffer
     // We will be using one single vertex buffer and one single index buffer for the whole glTF scene
     // Primitives (of the glTF model) will then index into these using index offsets

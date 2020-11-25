@@ -45,24 +45,27 @@ public:
 
     tinygltf::Model& loadModel(const std::string& fileName);
     void loadImages(tinygltf::Model& input);
-    void load(std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);
+    virtual void load(std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);
+
     void loadNode(const tinygltf::Node& inputNode, const tinygltf::Model& input, GltfLoader::Node* parent, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);
     void drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, size_t currentFrame, GltfLoader::Node node);
     void draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, size_t currentFrame);
     size_t getNumberOfPrimitives() const;
     size_t getNumberOfGeometries() const;
 
-private:
+protected:
+    void createBuffers(std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);
     void loadMaterials(tinygltf::Model& input);
     void loadTextures(tinygltf::Model& input);
 
-private:
+protected:
     std::vector<TextureModule> _textures;
     std::vector<Texture> _textures_idx;
     std::vector<SamplerModule> _samplers;
     std::vector<Material> _materials;
     std::vector<std::shared_ptr<Node>> _nodes; // TODO: Change to unique
     std::vector<VkDescriptorSet> _descriptorSets;
+    std::vector<Light> _lights;
     size_t _nbPrimitives;
     size_t _nbGeometries;
 
@@ -81,7 +84,7 @@ private:
         VkDeviceMemory memory;
     } _indices;
 
-private:
+protected:
     tinygltf::Model _model;
     tinygltf::TinyGLTF _loader;
     std::string _err;

@@ -169,7 +169,7 @@ private:
     Character _character;
     std::vector<TextureModule> _textures;
     std::vector<SamplerModule> _samplers;
-    std::vector<GltfLoader> _models;
+    std::vector<GltfLoader*> _models;
     RaytracingHandler _rtHandler {*this};
 
     VkQueue _graphicsQueue;
