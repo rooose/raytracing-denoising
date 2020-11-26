@@ -211,7 +211,7 @@ RandomScene::RandomScene(Application& app, float sceneSize, uint32_t scale, uint
     const size_t nbBoxes = static_cast<size_t>(rand() % scale) + scale / 2;
 
     // Generate lighting and materials
-    generateLighting(nbLights);
+    generateLighting(nbLights, true);
     generateMaterials(nbMaterials);
 
     // Generate floor plan
@@ -229,15 +229,33 @@ void RandomScene::load(std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& 
     createBuffers(indexBuffer, vertexBuffer);
 }
 
+void RandomScene::updateLights(float deltaTime)
+{
+    for (size_t i = 0; i < _lights.size(); i++) {
+        _lights[i].pos = glm::rotate(glm::identity<glm::mat4>(), deltaTime * _LightMouvement[i].first, _LightMouvement[i].second) * glm::vec4(_lights[i].pos, 0.); 
+    }
+}
+
 RandomScene::~RandomScene()
 {
 }
 
-void RandomScene::generateLighting(size_t nbLight, bool /*hasMovement*/)
+void RandomScene::update(float deltaTime)
 {
+    updateLights(deltaTime);
+}
+
+void RandomScene::generateLighting(size_t nbLight, bool hasMovement)
+{
+    _LightMouvement.resize(nbLight, std::make_pair(0,glm::vec3(1.,0.,0.)));
     // Possibly generate different type of lights
     // Generate nb of lights and applie transform
     for (size_t i = 0; i < nbLight; i++) {
+        if (hasMovement) {
+            // set speed
+            _LightMouvement[i].first = glm::radians(static_cast<float>(rand() % 100)/10000.);
+            _LightMouvement[i].second = glm::normalize(glm::vec3(static_cast<float>(rand() % 10000) / 10000., static_cast<float>(rand() % 10000) / 10000., static_cast<float>(rand() % 10000) / 10000.));
+        }
         Light light;
         // Generate random color
         light.color = glm::vec4(static_cast<float>(rand() % 10000) / 10000.f, static_cast<float>(rand() % 10000) / 10000.f, static_cast<float>(rand() % 10000) / 10000.f, 1.f);

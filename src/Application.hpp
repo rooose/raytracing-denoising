@@ -131,6 +131,8 @@ private:
 
     void updateUniformBuffer(uint32_t currentImage);
 
+    void updateModel(float deltaTime, uint32_t currentImage);
+
     void cleanupSwapchain();
 
     bool checkDeviceExtensionSupport(VkPhysicalDevice device) const;

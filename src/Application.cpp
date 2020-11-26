@@ -821,7 +821,7 @@ void Application::createDescriptorSetLayout()
     lightsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     lightsLayoutBinding.stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
     lightsLayoutBinding.binding = 6;
-    lightsLayoutBinding.descriptorCount = _lightsBuffer.size();
+    lightsLayoutBinding.descriptorCount = _lights.size();
 
     std::array<VkDescriptorSetLayoutBinding, 7> bindings({
         uniformBufferBinding,
@@ -1662,6 +1662,24 @@ void Application::updateUniformBuffer(uint32_t currentImage)
     vkMapMemory(_device, _uniformBuffersMemory[currentImage], 0, sizeof(ubo), NULL, &data);
     memcpy(data, &ubo, sizeof(ubo));
     vkUnmapMemory(_device, _uniformBuffersMemory[currentImage]);
+
+    updateModel(time, currentImage);
+}
+
+void Application::updateModel(float deltaTime, uint32_t currentImage)
+{
+    _models[0]->update(deltaTime);
+
+    _lights.clear();
+    _lights.insert(_lights.end(), _models[0]->_lights.begin(), _models[0]->_lights.end());
+
+    // Update Light positions
+    for (size_t i = 0; i < _models[0]->_lights.size(); i++) {
+        void* data;
+        vkMapMemory(_device, _lightsBuffer[i * _swapchainImages.size() + currentImage].memory, 0, sizeof(_lights[i]), NULL, &data);
+        memcpy(data, &_lights[i], sizeof(_lights[i]));
+        vkUnmapMemory(_device, _lightsBuffer[i * _swapchainImages.size() + currentImage].memory);
+    }
 }
 
 void Application::cleanupSwapchain()

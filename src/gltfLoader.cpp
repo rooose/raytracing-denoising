@@ -381,3 +381,7 @@ size_t GltfLoader::getNumberOfGeometries() const
 {
     return _nbGeometries;
 }
+
+void GltfLoader::update(float deltaTime)
+{
+}

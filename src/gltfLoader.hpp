@@ -53,6 +53,8 @@ public:
     size_t getNumberOfPrimitives() const;
     size_t getNumberOfGeometries() const;
 
+    virtual void update(float deltaTime);
+
 protected:
     void createBuffers(std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);
     void loadMaterials(tinygltf::Model& input);
