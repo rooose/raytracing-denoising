@@ -860,8 +860,9 @@ void Application::createRaytracingPipeline()
     auto raygen = ShaderModule(_device, "shaders/raygen.rgen.spv", VK_SHADER_STAGE_RAYGEN_BIT_KHR);
     auto raymiss = ShaderModule(_device, "shaders/miss.rmiss.spv", VK_SHADER_STAGE_MISS_BIT_KHR);
     auto raychit = ShaderModule(_device, "shaders/closehit.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
+    auto shadowmiss = ShaderModule(_device, "shaders/raytraceShadow.rmiss.spv", VK_SHADER_STAGE_MISS_BIT_KHR);
 
-    std::array<VkPipelineShaderStageCreateInfo, 3> shaderStages({ raygen.getStageInfo(), raymiss.getStageInfo(), raychit.getStageInfo() });
+    std::array<VkPipelineShaderStageCreateInfo, 4> shaderStages({ raygen.getStageInfo(), raymiss.getStageInfo(), raychit.getStageInfo(), shadowmiss.getStageInfo()});
 
     VkPushConstantRange pushConstantRange {};
     pushConstantRange.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
@@ -871,6 +872,7 @@ void Application::createRaytracingPipeline()
     constexpr uint32_t shaderIndexRaygen = 0;
     constexpr uint32_t shaderIndexMiss = 1;
     constexpr uint32_t shaderIndexClosestHit = 2;
+    constexpr uint32_t shaderShadowMiss = 3;
 
     std::array<VkDescriptorSetLayout, 2> setLayouts = { _descriptorSetLayouts.raytrace, _descriptorSetLayouts.textures };
 
@@ -900,6 +902,8 @@ void Application::createRaytracingPipeline()
     missGroupCI.closestHitShader = VK_SHADER_UNUSED_KHR;
     missGroupCI.anyHitShader = VK_SHADER_UNUSED_KHR;
     missGroupCI.intersectionShader = VK_SHADER_UNUSED_KHR;
+    _shaderGroups.push_back(missGroupCI);
+    missGroupCI.generalShader = shaderShadowMiss;
     _shaderGroups.push_back(missGroupCI);
 
     VkRayTracingShaderGroupCreateInfoKHR closesHitGroupCI {};
@@ -1295,7 +1299,7 @@ void Application::createCommandBuffers()
 
         VkStridedBufferRegionKHR hitShaderSBTEntry {};
         hitShaderSBTEntry.buffer = _shaderBindingTableBuffer;
-        hitShaderSBTEntry.offset = static_cast<VkDeviceSize>(_rtHandler._rtProperties.shaderGroupBaseAlignment * 2); // INDEX_CLOSEST_HIT_GROUP
+        hitShaderSBTEntry.offset = static_cast<VkDeviceSize>(_rtHandler._rtProperties.shaderGroupBaseAlignment * 3); // INDEX_CLOSEST_HIT_GROUP
         hitShaderSBTEntry.stride = _rtHandler._rtProperties.shaderGroupBaseAlignment;
         hitShaderSBTEntry.size = sbtSize;
 

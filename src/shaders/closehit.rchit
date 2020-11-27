@@ -3,7 +3,7 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 
 layout(location = 0) rayPayloadInEXT vec3 hitValue;
-//layout(location = 2) rayPayloadEXT bool shadowed;
+layout(location = 2) rayPayloadEXT bool shadowed;
 hitAttributeEXT vec3 attribs;
 
 layout(binding = 0, set = 0) uniform UBO 
@@ -88,23 +88,24 @@ void main()
 	vec4 lightColor = vec4(0.,0.,0.,1.);
 	for (int i = 0; i < PushConstant.nbLights; i ++)
 	{
+		float tmin = 0.001;
+		float tmax = 10000.0;
+
+		vec3 origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
 		vec3 lightVector = normalize(lights[i].pos - pos);
 		float dot_product = max(dot(lightVector, normal), 0);
+
+		shadowed = true;
+		//	 Trace shadow ray and offset indices to match shadow hit/miss shader group indices
+		traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0xFF, 1, 0, 1, origin, tmin, lightVector, tmax, 2);
+
 		lightColor += lights[i].color * dot_product;
+		if (shadowed) {
+			lightColor *= 0.3;
+		}
 	}
 
-	lightColor = vec4(min(1., lightColor.x), min(1., lightColor.y), min(1., lightColor.z), 1.);
- 
-	// Shadow casting
-	//	float tmin = 0.001;
-	//	float tmax = 10000.0;
-	//	vec3 origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
-	//	shadowed = true;  
-	// Trace shadow ray and offset indices to match shadow hit/miss shader group indices
-	//	traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0xFF, 1, 0, 1, origin, tmin, lightVector, tmax, 2);
-	//	if (shadowed) {
-	//		hitValue *= 0.3;
-	//	}
+	lightColor = vec4(min(1., lightColor.x), min(1., lightColor.y), min(1., lightColor.z), 1.);		
 
 //	hitValue = vec3(materials[v0.materialId].baseColorTextureIndex/10., 0., 0.);
 
