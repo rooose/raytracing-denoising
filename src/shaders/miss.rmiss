@@ -14,6 +14,7 @@ layout(binding = 0, set = 1) uniform sampler2D texSamplers[];
 
 void main()
 {
+
 	vec3 R = normalize(gl_WorldRayDirectionEXT.xyz);
 
 	float theta = atan(R.y / R.x) + ((R.x < 0) ? sign(R.y) * PI : 0.);
@@ -25,6 +26,7 @@ void main()
 
 	vec2 coords = vec2(l, -h);
 	hitValue.color = texture(texSamplers[0], coords).xyz;
+	hitValue.reflector = 0.;
 
 //    hitValue.color = vec3(0.0);
 	hitValue.distance = -1;

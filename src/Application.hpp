@@ -23,7 +23,7 @@ constexpr uint32_t WINDOW_HEIGHT = 600;
 constexpr size_t MAX_FRAMES_IN_FLIGHT = 6;
 
 const std::string MODEL_PATH = "../../assets/models/ironman/scene.gltf";
-const std::string SKYDOME_PATH = "../../assets/textures/skydome.jpg";
+const std::string SKYDOME_PATH = "../../assets/textures/colorful_studio_2k.hdr";
 
 const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
