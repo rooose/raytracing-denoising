@@ -13,6 +13,13 @@ public:
     struct Material {
         glm::vec4 baseColorFactor = glm::vec4(1.0f);
         uint32_t baseColorTextureIndex;
+        float ambientCoeff =1.f;
+        float diffuseCoeff = 1.f;
+        float specularCoeff = 1.f;
+        float shininessCoeff = 1.f;
+        float reflexionCoeff = 1.f;
+        float refractionCoeff = 1.f;
+        float refractionIndice = 1.f;
     };
 
     // A primitive contains the data for a single draw call
@@ -34,6 +41,7 @@ public:
         Mesh mesh;
         glm::mat4 matrix;
     };
+
 
     struct Texture { // TODO : Put this in TextureModule
         int32_t imageIndex;

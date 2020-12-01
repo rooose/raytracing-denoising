@@ -720,8 +720,8 @@ void Application::createModelsUniforms()
     for (size_t i = 0; i < _lights.size(); i++) {
         for (size_t j = 0; j < _swapchainImages.size(); j++) {
             void* data;
-            vkMapMemory(_device, _lightsBuffer[i * _swapchainImages.size() + j].memory, 0, sizeof(_lights[i]), NULL, &data);
-            memcpy(data, &_lights[i], sizeof(_lights[i]));
+            vkMapMemory(_device, _lightsBuffer[i * _swapchainImages.size() + j].memory, 0, LightBufferSize, NULL, &data);
+            memcpy(data, &_lights[i], LightBufferSize);
             vkUnmapMemory(_device, _lightsBuffer[i * _swapchainImages.size() + j].memory);
         }
     }
@@ -1680,8 +1680,8 @@ void Application::updateModel(float deltaTime, uint32_t currentImage)
     // Update Light positions
     for (size_t i = 0; i < _models[0]->_lights.size(); i++) {
         void* data;
-        vkMapMemory(_device, _lightsBuffer[i * _swapchainImages.size() + currentImage].memory, 0, sizeof(_lights[i]), NULL, &data);
-        memcpy(data, &_lights[i], sizeof(_lights[i]));
+        vkMapMemory(_device, _lightsBuffer[i * _swapchainImages.size() + currentImage].memory, 0, sizeof(Light), NULL, &data);
+        memcpy(data, &_lights[i], sizeof(Light));
         vkUnmapMemory(_device, _lightsBuffer[i * _swapchainImages.size() + currentImage].memory);
     }
 }

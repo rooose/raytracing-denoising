@@ -2,7 +2,15 @@
 #extension GL_EXT_ray_tracing : require
 #extension GL_EXT_nonuniform_qualifier : enable
 
-layout(location = 0) rayPayloadInEXT vec3 hitValue;
+struct RayPayload {
+	vec3 color;
+	float distance;
+	vec3 normal;
+	float reflector;
+};
+
+
+layout(location = 0) rayPayloadInEXT RayPayload hitValue;
 layout(location = 2) rayPayloadEXT bool shadowed;
 hitAttributeEXT vec3 attribs;
 
@@ -20,6 +28,13 @@ layout(binding = 5, set = 0) uniform Material
 { 
 	vec4 baseColorFactor;
 	int baseColorTextureIndex;
+	float ambientCoeff;
+    float diffuseCoeff;
+    float specularCoeff;
+    float shininessCoeff;
+    float reflexionCoeff;
+    float refractionCoeff;
+    float refractionIndice;
 } materials[];
 
 layout(binding = 6, set = 0) uniform Light 
@@ -77,42 +92,66 @@ void main()
 	// Interpolate normal
 	const vec3 barycentricCoords = vec3(1.0f - attribs.x - attribs.y, attribs.x, attribs.y);
 	const vec3 normal = normalize(v0.normal * barycentricCoords.x + v1.normal * barycentricCoords.y + v2.normal * barycentricCoords.z);
-	const vec4 color = (v0.color * barycentricCoords.x + v1.color * barycentricCoords.y + v2.color * barycentricCoords.z) * materials[v0.materialId].baseColorFactor ;
+	const vec4 color = (v0.color * barycentricCoords.x + v1.color * barycentricCoords.y + v2.color * barycentricCoords.z) * materials[v0.materialId].baseColorFactor * materials[v0.materialId].baseColorFactor ;
 	const vec3 pos = (v0.pos * barycentricCoords.x + v1.pos * barycentricCoords.y + v2.pos * barycentricCoords.z);
 
 	// Interpolate for texture
 	const vec2 textCoords = (v0.texCoord * barycentricCoords.x + v1.texCoord * barycentricCoords.y + v2.texCoord * barycentricCoords.z);
-//	vec2 texCoords = 
+
+	vec4 cameraPos = ubo.viewInverse * vec4(0,0,0,1);
 
 	// Basic lighting
 	vec4 lightColor = vec4(0.,0.,0.,1.);
-	for (int i = 0; i < PushConstant.nbLights; i ++)
+	for (int i = 0; i < PushConstant.nbLights; i ++) //  PushConstant.nbLights
 	{
-		float tmin = 0.001;
-		float tmax = 10000.0;
+		const vec3 origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
+		const vec3 lightVector = normalize(lights[i].pos - origin);
+		const float dot_product = dot(lightVector, normal);
 
-		vec3 origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
-		vec3 lightVector = normalize(lights[i].pos - pos);
-		float dot_product = max(dot(lightVector, normal), 0);
+		if (dot_product > 0.) {
+			const float tmin = 0.001;
+			const float tmax = 10000.0;
 
-		shadowed = true;
-		//	 Trace shadow ray and offset indices to match shadow hit/miss shader group indices
-		traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0xFF, 1, 0, 1, origin, tmin, lightVector, tmax, 2);
+			shadowed = true;
+			float shadow_factor = 1.;
+			//	 Trace shadow ray and offset indices to match shadow hit/miss shader group indices
+			traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0xFF, 1, 0, 1, origin, tmin, lightVector, tmax, 2);
+			const float gouraudFactor = materials[v0.materialId].diffuseCoeff * dot_product;
 
-		lightColor += lights[i].color * dot_product;
-		if (shadowed) {
-			lightColor *= 0.3;
+			if (shadowed) {
+				shadow_factor = 0.3;
+			} else {
+				const float alignement = dot(normalize(reflect(lightVector, normal)), normalize(cameraPos.xyz-pos));
+				if (alignement > 0.)
+				{
+					const float phongfactor = materials[v0.materialId].specularCoeff * pow(alignement, materials[v0.materialId].shininessCoeff);
+					lightColor += phongfactor * lights[i].color;
+
+				}
+			}
+			lightColor += lights[i].color  * gouraudFactor * shadow_factor;
 		}
 	}
 
 	lightColor = vec4(min(1., lightColor.x), min(1., lightColor.y), min(1., lightColor.z), 1.);		
 
-//	hitValue = vec3(materials[v0.materialId].baseColorTextureIndex/10., 0., 0.);
+//	if (materials[v0.materialId].reflexionCoeff > 0.5){
+//		const vec3 origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
+//		const vec3 direction = normalize(reflect(normalize(cameraPos.xyz-pos), normal));
+//
+//		float tmin = 0.001;
+//		float tmax = 10000.0;
+//		hitValue = vec3(1.0);
+//		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin, tmin, direction, tmax, 0);
+//
+//		hitValue = (1 - materials[v0.materialId].reflexionCoeff) *  (lightColor * color).xyz + materials[v0.materialId].reflexionCoeff * hitValue;
+//	}
+//	else {
+//	}
 
-//	hitValue = vec3(PushConstant.nbLights/1,0., 0.);
-//	hitValue = normal * 0.5 + 0.5;
-	hitValue = (lightColor * color).xyz;
-//	hitValue = texture(texSamplers[materials[v0.materialId].baseColorTextureIndex], textCoords).xyz;
-//	hitValue = texture(texSampler, v0.texCoord).xyz;
-//	hitValue = color.xyz;
+	hitValue.color = (lightColor * color).xyz;
+	hitValue.distance = gl_HitTEXT;
+	hitValue.normal = normal;
+	hitValue.reflector = materials[v0.materialId].reflexionCoeff;
+
 }

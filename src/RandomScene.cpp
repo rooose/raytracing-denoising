@@ -253,13 +253,13 @@ void RandomScene::generateLighting(size_t nbLight, bool hasMovement)
     for (size_t i = 0; i < nbLight; i++) {
         if (hasMovement) {
             // set speed
-            _LightMouvement[i].first = glm::radians(static_cast<float>(rand() % 100)/10000.);
+            _LightMouvement[i].first = glm::radians(static_cast<float>(rand() % 500)/100000. + 5/1000);
             _LightMouvement[i].second = glm::normalize(glm::vec3(static_cast<float>(rand() % 10000) / 10000., static_cast<float>(rand() % 10000) / 10000., static_cast<float>(rand() % 10000) / 10000.));
         }
         Light light;
         // Generate random color
         light.color = glm::vec4(static_cast<float>(rand() % 10000) / 10000.f, static_cast<float>(rand() % 10000) / 10000.f, static_cast<float>(rand() % 10000) / 10000.f, 1.f);
-        light.intensity = static_cast<float>(rand() / 20);
+        light.intensity = 1.f;
         light.pos = getRandomTransformation() * glm::vec4(0.f, 0.f, 0.f, 1.f);
         _lights.push_back(light);
     }
@@ -267,14 +267,24 @@ void RandomScene::generateLighting(size_t nbLight, bool hasMovement)
 
 void RandomScene::generateMaterials(size_t nbMaterials)
 {
-
     // Hard code a mirror
+    {
+        Material mirrorMat;
+        mirrorMat.baseColorFactor = glm::vec4(1.f);
+        mirrorMat.reflexionCoeff = 1.f;
+        _materials.push_back(mirrorMat);
+    }
 
     // Generate random Base color
     for (size_t i = 0; i < nbMaterials; i++) {
         Material mat;
         mat.baseColorFactor = glm::vec4(static_cast<float>(rand() % 10000) / 10000.f, static_cast<float>(rand() % 10000) / 10000.f, static_cast<float>(rand() % 10000) / 10000.f, 1.f);
         mat.baseColorTextureIndex = -1;
+        mat.ambientCoeff = static_cast<float>(rand() % 50000) / 10000.f + 0.5;
+        mat.diffuseCoeff = static_cast<float>(rand() % 50000) / 10000.f+0.5;
+        mat.reflexionCoeff = static_cast<float>(rand() % 10000) / 10000.f;
+        mat.shininessCoeff = 20.;
+        mat.specularCoeff = 1.;
 
         _materials.push_back(mat);
     }
@@ -299,7 +309,7 @@ void RandomScene::generateSpheres(size_t nbSpheres)
 
         // Applie random scale trasform (ratio only)
         const glm::vec3 ratios = { 1.f, static_cast<float>(rand() % 400) / 100.+0.8f, static_cast<float>(rand() % 400) / 100.+0.8f };
-        const glm::mat4 scaleMat = glm::scale(glm::identity<glm::mat4>(), glm::normalize(ratios));
+        const glm::mat4 scaleMat =  glm::scale(glm::identity<glm::mat4>(), glm::normalize(ratios));
 
         // applie random transfom
         const auto randomTransform = getRandomTransformation();
