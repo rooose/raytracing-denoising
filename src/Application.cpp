@@ -146,7 +146,7 @@ void Application::initVulkan()
     createCommandPool();
     createStorageImage();
     _samplers.emplace_back(*this);
-    _textures.emplace_back(*this, _samplers[0], TEXTURE_PATH);
+    _textures.emplace_back(*this, _samplers[0], SKYDOME_PATH);
     _models.push_back(new RandomScene(*this, 20.f, 30));
     //_models[0]->loadModel(MODEL_PATH);
     _models[0]->load(_indices, _vertices);
@@ -842,9 +842,9 @@ void Application::createDescriptorSetLayout()
     }
     VkDescriptorSetLayoutBinding setLayoutBinding {};
     setLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    setLayoutBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+    setLayoutBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_MISS_BIT_KHR;
     setLayoutBinding.binding = 0;
-    setLayoutBinding.descriptorCount = _models[0]->_textures.size() + 1;
+    setLayoutBinding.descriptorCount = _models[0]->_textures.size() + _textures.size();
 
     descriptorSetLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptorSetLayoutCreateInfo.bindingCount = 1;
@@ -1053,7 +1053,7 @@ void Application::createDescriptorPool()
 
     VkDescriptorPoolSize ImagesDescriptorPoolSize {};
     ImagesDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    ImagesDescriptorPoolSize.descriptorCount = 1;// _textures.size();
+    ImagesDescriptorPoolSize.descriptorCount = _models[0]->_textures.size() + _textures.size();
 
     VkDescriptorPoolSize matDescriptorPoolSize {};
     matDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1231,15 +1231,17 @@ void Application::createDescriptorSets()
     }
 
     std::vector<VkDescriptorImageInfo> imageInfos;
+    
+    for (size_t j = 0; j < _textures.size(); j++) {
+        imageInfos.push_back(*_textures[j].getDescriptorSet(_modelTexturesDescriptorSet, 0).pImageInfo);
+    }
+
     for (size_t j = 0; j < _models.size(); j++) {
         for (size_t i = 0; i < _models[j]->_textures.size(); i++) {
             imageInfos.push_back(*_models[j]->_textures[i].getDescriptorSet(_modelTexturesDescriptorSet, 0).pImageInfo);
         }
     }
 
-    for (size_t j = 0; j < _textures.size(); j++) {
-        imageInfos.push_back(*_textures[j].getDescriptorSet(_modelTexturesDescriptorSet, 0).pImageInfo);
-    }
     VkWriteDescriptorSet descriptorSet {};
     descriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     descriptorSet.dstSet = _modelTexturesDescriptorSet;
