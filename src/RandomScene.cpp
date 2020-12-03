@@ -17,40 +17,40 @@ static std::pair<std::vector<glm::vec3>, std::vector<uint32_t>> getDefaultCube()
 
     std::array<glm::vec3, 24> vertices = {
         // Front face
-        glm::vec3(-1.0,-1.0,1.0),
-        glm::vec3(-1.0,1.0,1.0),
-        glm::vec3(1.0,1.0,1.0),
-        glm::vec3(1.0,-1.0,1.0),
+        glm::vec3(-1.0, -1.0, 1.0),
+        glm::vec3(-1.0, 1.0, 1.0),
+        glm::vec3(1.0, 1.0, 1.0),
+        glm::vec3(1.0, -1.0, 1.0),
 
         // Back face
-        glm::vec3(-1.0,-1.0,-1.0),
-        glm::vec3(1.0,-1.0,-1.0),
-        glm::vec3(1.0,1.0,-1.0),
-        glm::vec3(-1.0,1.0,-1.0),
+        glm::vec3(-1.0, -1.0, -1.0),
+        glm::vec3(1.0, -1.0, -1.0),
+        glm::vec3(1.0, 1.0, -1.0),
+        glm::vec3(-1.0, 1.0, -1.0),
 
         // Top face
-        glm::vec3(-1.0,1.0,-1.0),
-        glm::vec3(1.0,1.0,-1.0),
-        glm::vec3(1.0,1.0,1.0),
-        glm::vec3(-1.0,1.0,1.0),
+        glm::vec3(-1.0, 1.0, -1.0),
+        glm::vec3(1.0, 1.0, -1.0),
+        glm::vec3(1.0, 1.0, 1.0),
+        glm::vec3(-1.0, 1.0, 1.0),
 
         // Bottom face
-        glm::vec3(-1.0,-1.0,-1.0),
-        glm::vec3(-1.0,-1.0,1.0),
-        glm::vec3(1.0,-1.0,1.0),
-        glm::vec3(1.0,-1.0,-1.0),
+        glm::vec3(-1.0, -1.0, -1.0),
+        glm::vec3(-1.0, -1.0, 1.0),
+        glm::vec3(1.0, -1.0, 1.0),
+        glm::vec3(1.0, -1.0, -1.0),
 
         // Right face
-        glm::vec3(1.0,-1.0,-1.0),
-        glm::vec3(1.0,-1.0,1.0),
-        glm::vec3(1.0,1.0,1.0),
-        glm::vec3(1.0,1.0,-1.0),
+        glm::vec3(1.0, -1.0, -1.0),
+        glm::vec3(1.0, -1.0, 1.0),
+        glm::vec3(1.0, 1.0, 1.0),
+        glm::vec3(1.0, 1.0, -1.0),
 
         // Left face
-        glm::vec3(-1.0,-1.0,-1.0),
-        glm::vec3(-1.0,1.0,-1.0),
-        glm::vec3(-1.0,1.0,1.0),
-        glm::vec3(-1.0,-1.0,1.0)
+        glm::vec3(-1.0, -1.0, -1.0),
+        glm::vec3(-1.0, 1.0, -1.0),
+        glm::vec3(-1.0, 1.0, 1.0),
+        glm::vec3(-1.0, -1.0, 1.0),
     };
 
     return std::make_pair(std::vector(vertices.begin(), vertices.end()), std::vector(indices.begin(), indices.end()));
@@ -59,14 +59,14 @@ static std::pair<std::vector<glm::vec3>, std::vector<uint32_t>> getDefaultCube()
 static std::pair<std::vector<glm::vec3>, std::vector<uint32_t>> getDefaultPlan()
 {
     std::array<uint32_t, 6> indices = {
-        0, 1, 2, 2, 3, 0
+        1, 2, 0, 3, 0, 2
     };
 
     std::array<glm::vec3, 4> vertices = {
-        glm::vec3(-0.5f, 0, -0.5f),
-        glm::vec3(0.5f, 0, -0.5f),
-        glm::vec3(0.5f, 0, 0.5f),
-        glm::vec3(-0.5f, 0, 0.5f)
+        glm::vec3(-0.5f, -0.5f, 0),
+        glm::vec3(-0.5f, 0.5f, 0),
+        glm::vec3(0.5f, 0.5f, 0),
+        glm::vec3(0.5f, -0.5f, 0),
     };
 
     return std::make_pair(std::vector(vertices.begin(), vertices.end()), std::vector(indices.begin(), indices.end()));
@@ -207,7 +207,7 @@ RandomScene::RandomScene(Application& app, float sceneSize, uint32_t scale, uint
     // Generate all items counts
     const size_t nbLights = static_cast<size_t>(rand() % (scale / 4)) + 1;
     const size_t nbMaterials = 3 * static_cast<size_t>(rand() % (scale)) + scale * 3 / 4;
-    const size_t nbSpheres = static_cast<size_t>(rand() % scale) + scale/2;
+    const size_t nbSpheres = static_cast<size_t>(rand() % scale) + scale / 2;
     const size_t nbBoxes = static_cast<size_t>(rand() % scale) + scale / 2;
 
     // Generate lighting and materials
@@ -232,7 +232,7 @@ void RandomScene::load(std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& 
 void RandomScene::updateLights(float deltaTime)
 {
     for (size_t i = 0; i < _lights.size(); i++) {
-        _lights[i].pos = glm::rotate(glm::identity<glm::mat4>(), deltaTime * _LightMouvement[i].first, _LightMouvement[i].second) * glm::vec4(_lights[i].pos, 0.); 
+        _lights[i].pos = glm::rotate(glm::identity<glm::mat4>(), deltaTime * _LightMouvement[i].first, _LightMouvement[i].second) * glm::vec4(_lights[i].pos, 0.);
     }
 }
 
@@ -247,13 +247,13 @@ void RandomScene::update(float deltaTime)
 
 void RandomScene::generateLighting(size_t nbLight, bool hasMovement)
 {
-    _LightMouvement.resize(nbLight, std::make_pair(0,glm::vec3(1.,0.,0.)));
+    _LightMouvement.resize(nbLight, std::make_pair(0, glm::vec3(1., 0., 0.)));
     // Possibly generate different type of lights
     // Generate nb of lights and applie transform
     for (size_t i = 0; i < nbLight; i++) {
         if (hasMovement) {
             // set speed
-            _LightMouvement[i].first = glm::radians(static_cast<float>(rand() % 500)/100000. + 5/1000);
+            _LightMouvement[i].first = glm::radians(static_cast<float>(rand() % 500) / 100000. + 5 / 1000);
             _LightMouvement[i].second = glm::normalize(glm::vec3(static_cast<float>(rand() % 10000) / 10000., static_cast<float>(rand() % 10000) / 10000., static_cast<float>(rand() % 10000) / 10000.));
         }
         Light light;
@@ -281,7 +281,7 @@ void RandomScene::generateMaterials(size_t nbMaterials)
         mat.baseColorFactor = glm::vec4(static_cast<float>(rand() % 10000) / 10000.f, static_cast<float>(rand() % 10000) / 10000.f, static_cast<float>(rand() % 10000) / 10000.f, 1.f);
         mat.baseColorTextureIndex = -1;
         mat.ambientCoeff = static_cast<float>(rand() % 50000) / 10000.f + 0.5;
-        mat.diffuseCoeff = static_cast<float>(rand() % 50000) / 10000.f+0.5;
+        mat.diffuseCoeff = static_cast<float>(rand() % 50000) / 10000.f + 0.5;
         mat.reflexionCoeff = static_cast<float>(rand() % 10000) / 10000.f;
         mat.shininessCoeff = 20.;
         mat.specularCoeff = 1.;
@@ -308,8 +308,8 @@ void RandomScene::generateSpheres(size_t nbSpheres)
     for (size_t i = 0; i < nbSpheres; i++) {
 
         // Applie random scale trasform (ratio only)
-        const glm::vec3 ratios = { 1.f, static_cast<float>(rand() % 400) / 100.+0.8f, static_cast<float>(rand() % 400) / 100.+0.8f };
-        const glm::mat4 scaleMat =  glm::scale(glm::identity<glm::mat4>(), glm::normalize(ratios));
+        const glm::vec3 ratios = { 1.f, static_cast<float>(rand() % 400) / 100. + 0.8f, static_cast<float>(rand() % 400) / 100. + 0.8f };
+        const glm::mat4 scaleMat = glm::scale(glm::identity<glm::mat4>(), glm::normalize(ratios));
 
         // applie random transfom
         const auto randomTransform = getRandomTransformation();
@@ -351,7 +351,7 @@ void RandomScene::generateBoxes(size_t nbBoxes)
     const auto simpleBox = getDefaultCube();
     for (size_t i = 0; i < nbBoxes; i++) {
         // Applie random scale trasform (ratio only)
-        const glm::vec3 ratios = { 1.f, static_cast<float>(rand() % 1000) / 100. + 0.5, static_cast<float>(rand() % 1000) / 100.+0.5 };
+        const glm::vec3 ratios = { 1.f, static_cast<float>(rand() % 1000) / 100. + 0.5, static_cast<float>(rand() % 1000) / 100. + 0.5 };
         const glm::mat4 scaleMat = glm::scale(glm::identity<glm::mat4>(), glm::normalize(ratios));
         const auto normals = computeNormals(simpleBox);
         const auto randomTransform = getRandomTransformation();
@@ -394,7 +394,7 @@ void RandomScene::generateFloor()
     // Scale it to _sceneSize
     const auto scaleMat = glm::scale(glm::identity<glm::mat4>(), glm::vec3(_sceneSize * 2));
 
-    const size_t randomMaterialId = rand() % _materials.size(); // TODO: Check if we want random material
+    const size_t randomMaterialId = rand() % _materials.size();
 
     // Create Actual Data
     size_t startVertexCount = _vertices.size();
@@ -428,7 +428,7 @@ glm::mat4 RandomScene::getRandomTransformation() const
     glm::mat4 transform = glm::rotate(glm::identity<glm::mat4>(), glm::radians(static_cast<float>(rand() % 360)), glm::normalize(glm::vec3(rand(), rand(), rand())));
 
     // Add Transform
-    transform = glm::translate(glm::identity<glm::mat4>(), glm::vec3(fmod(rand(), _sceneSize) - _sceneSize / 2.f, fmod(rand(), _sceneSize / 2.f), fmod(rand(), _sceneSize) - _sceneSize / 2.f)) * transform;
+    transform = glm::translate(glm::identity<glm::mat4>(), glm::vec3(fmod(rand(), _sceneSize) - _sceneSize / 2.f, fmod(rand(), _sceneSize) - _sceneSize / 2.f, fmod(rand(), _sceneSize / 2.f))) * transform;
 
     return transform;
 }

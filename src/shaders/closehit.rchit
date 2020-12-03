@@ -91,14 +91,12 @@ void main()
 
 	// Interpolate normal
 	const vec3 barycentricCoords = vec3(1.0f - attribs.x - attribs.y, attribs.x, attribs.y);
-	const vec3 normal = normalize(v0.normal * barycentricCoords.x + v1.normal * barycentricCoords.y + v2.normal * barycentricCoords.z);
-	const vec4 color = (v0.color * barycentricCoords.x + v1.color * barycentricCoords.y + v2.color * barycentricCoords.z) * materials[v0.materialId].baseColorFactor * materials[v0.materialId].baseColorFactor ;
+	vec3 normal = normalize(v0.normal * barycentricCoords.x + v1.normal * barycentricCoords.y + v2.normal * barycentricCoords.z);
+	const vec4 color = (v0.color * barycentricCoords.x + v1.color * barycentricCoords.y + v2.color * barycentricCoords.z) * materials[v0.materialId].baseColorFactor ;
 	const vec3 pos = (v0.pos * barycentricCoords.x + v1.pos * barycentricCoords.y + v2.pos * barycentricCoords.z);
 
 	// Interpolate for texture
 	const vec2 textCoords = (v0.texCoord * barycentricCoords.x + v1.texCoord * barycentricCoords.y + v2.texCoord * barycentricCoords.z);
-
-	vec4 cameraPos = ubo.viewInverse * vec4(0,0,0,1);
 
 	// Basic lighting
 	vec4 lightColor = vec4(0.,0.,0.,1.);
@@ -121,7 +119,7 @@ void main()
 			if (shadowed) {
 				shadow_factor = 0.3;
 			} else {
-				const float alignement = dot(normalize(reflect(lightVector, normal)), normalize(cameraPos.xyz-pos));
+				const float alignement = dot(normalize(reflect(lightVector, normal)), gl_WorldRayDirectionEXT);
 				if (alignement > 0.)
 				{
 					const float phongfactor = materials[v0.materialId].specularCoeff * pow(alignement, materials[v0.materialId].shininessCoeff);
@@ -133,23 +131,10 @@ void main()
 		}
 	}
 
-	lightColor = vec4(min(1., lightColor.x), min(1., lightColor.y), min(1., lightColor.z), 1.);		
-
-//	if (materials[v0.materialId].reflexionCoeff > 0.5){
-//		const vec3 origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
-//		const vec3 direction = normalize(reflect(normalize(cameraPos.xyz-pos), normal));
-//
-//		float tmin = 0.001;
-//		float tmax = 10000.0;
-//		hitValue = vec3(1.0);
-//		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin, tmin, direction, tmax, 0);
-//
-//		hitValue = (1 - materials[v0.materialId].reflexionCoeff) *  (lightColor * color).xyz + materials[v0.materialId].reflexionCoeff * hitValue;
-//	}
-//	else {
-//	}
+	lightColor = vec4(min(1., lightColor.x), min(1., lightColor.y), min(1., lightColor.z), 1.);
 
 	hitValue.color = (lightColor * color).xyz;
+//	hitValue.color = normal;
 	hitValue.distance = gl_HitTEXT;
 	hitValue.normal = normal;
 	hitValue.reflector = materials[v0.materialId].reflexionCoeff;

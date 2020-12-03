@@ -177,8 +177,8 @@ void RaytracingHandler::createTopLevelAccelerationStructure()
 
     VkTransformMatrixKHR transformMatrix = {
         1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, -1.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f };
+        0.0f, 1.f, 0.f, 0.0f,
+        0.0f, 0.f, 1.f, 0.0f };
 
     VkAccelerationStructureInstanceKHR instance{};
     instance.transform = transformMatrix;

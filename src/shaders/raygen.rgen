@@ -17,10 +17,9 @@ layout(binding = 0, set = 0) uniform CameraProperties
 layout(binding = 1, set = 0) uniform accelerationStructureEXT topLevelAS;
 layout(binding = 2, set = 0, rgba8) uniform image2D image;
 
-layout (constant_id = 0) const int MAX_RECURSION = 2;
+layout (constant_id = 0) const int MAX_RECURSION = 5;
 
 layout(location = 0) rayPayloadEXT RayPayload rayPayload;
-
 
 
 
@@ -32,7 +31,8 @@ void main()
 
 	vec4 origin = cam.viewInverse * vec4(0,0,0,1);
 	vec4 target = cam.projInverse * vec4(d.x, d.y, 1, 1) ;
-	vec4 direction = cam.viewInverse*vec4(normalize(target.xyz), 0) ;
+	vec4 direction =  normalize(cam.viewInverse*vec4(target.xyz, 0)) ;
+	
 
 	float tmin = 0.001;
 	float tmax = 10000.0;
@@ -40,18 +40,18 @@ void main()
 
     vec3 color = vec3(0.0);
 	float energie = 1.;
-	for (int i = 0; i < MAX_RECURSION; i++) {
-		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin.xyz, tmin, normalize(direction.xyz), tmax, 0);
+	for (int i = 0; i <= MAX_RECURSION; i++) {
+		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin.xyz, tmin,direction.xyz, tmax, 0);
 		energie *= rayPayload.reflector;
 		vec3 hitColor = rayPayload.color;
 
 		if (rayPayload.distance < 0.0f) {
 			color = hitColor;
 			break;
-		} else if ( energie >= 0.7f) {
+		} else if ( i != MAX_RECURSION && energie >= 0.7f) {
 			const vec4 hitPos = origin + direction * rayPayload.distance;
 			origin.xyz = hitPos.xyz + rayPayload.normal * 0.001f;
-			direction.xyz = reflect(-direction.xyz, rayPayload.normal);
+			direction.xyz =  normalize(reflect(direction.xyz, rayPayload.normal));
 			color += (1-energie) * hitColor;
 		} else {
 			color += hitColor * energie;
