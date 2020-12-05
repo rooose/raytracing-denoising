@@ -25,5 +25,5 @@ private:
     float _sceneSize;
     std::vector<Vertex> _vertices;
     std::vector<uint32_t> _indices;
-    std::vector<std::pair<float,glm::vec3>> _LightMouvement;
+    std::vector<std::pair<float, glm::vec3>> _LightMouvement;
 };

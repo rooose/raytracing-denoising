@@ -39,6 +39,7 @@ void main()
 
 
     vec3 color = vec3(0.0);
+	float leftEnergie = 1.;
 	float energie = 1.;
 	for (int i = 0; i <= MAX_RECURSION; i++) {
 		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin.xyz, tmin,direction.xyz, tmax, 0);
@@ -53,8 +54,10 @@ void main()
 			origin.xyz = hitPos.xyz + rayPayload.normal * 0.001f;
 			direction.xyz =  normalize(reflect(direction.xyz, rayPayload.normal));
 			color += (1-energie) * hitColor;
+			leftEnergie -= (1-energie);
 		} else {
-			color += hitColor * energie;
+			leftEnergie = max(0, leftEnergie); // should never be negative, but use this as a precaution
+			color += hitColor * leftEnergie;
 			break;
 		}
 	}

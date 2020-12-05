@@ -6,7 +6,6 @@
 #include "gltfLoader.hpp"
 #include "RaytracingHandler.hpp"
 
-
 #include <cstdlib>
 #include <iostream>
 #include <optional>
@@ -20,8 +19,9 @@
 
 constexpr uint32_t WINDOW_WIDTH = 800;
 constexpr uint32_t WINDOW_HEIGHT = 600;
-constexpr size_t MAX_FRAMES_IN_FLIGHT = 6;
+constexpr size_t MAX_FRAMES_IN_FLIGHT = 6; // How many frame are always generated (determines the swapchain size)
 
+constexpr bool USE_RANDOM_SCENE = true;
 const std::string MODEL_PATH = "../../assets/models/ironman/scene.gltf";
 const std::string SKYDOME_PATH = "../../assets/textures/colorful_studio_2k.hdr";
 
@@ -29,10 +29,10 @@ const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     VK_KHR_RAY_TRACING_EXTENSION_NAME,
     VK_KHR_MAINTENANCE3_EXTENSION_NAME,
-    VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME, 
-    VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME, 
+    VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
+    VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
     VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
-    VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME, 
+    VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
     VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME
 };
 
@@ -167,12 +167,11 @@ private:
     VkPhysicalDevice _physDevice { VK_NULL_HANDLE };
     VkDevice _device;
 
-
     Character _character;
     std::vector<TextureModule> _textures;
     std::vector<SamplerModule> _samplers;
-    std::vector<GltfLoader*> _models;
-    RaytracingHandler _rtHandler {*this};
+    std::unique_ptr<GltfLoader> _model;
+    RaytracingHandler _rtHandler { *this };
 
     VkQueue _graphicsQueue;
     VkQueue _presentQueue;
@@ -199,8 +198,7 @@ private:
     std::vector<Buffer> _lightsBuffer;
     std::vector<Light> _lights;
 
-    VkBuffer _shaderBindingTableBuffer;
-    VkDeviceMemory _shaderBindingTableMemory;
+    Buffer _shaderBindingTable;
 
     // Parameters
     VkFormat _swapchainImageFormat;
@@ -211,8 +209,7 @@ private:
     std::vector<VkImageView> _swapchainImageViews;
     std::vector<VkFramebuffer> _swapchainFramebuffers;
 
-    std::vector<VkRayTracingShaderGroupCreateInfoKHR> _shaderGroups{};
-
+    std::vector<VkRayTracingShaderGroupCreateInfoKHR> _shaderGroups {};
 
     // Main Loop Variables
     std::vector<VkSemaphore> _imageAvailableSemaphores;
@@ -228,8 +225,7 @@ private:
     //VkBuffer _indexBuffer;
     //VkDeviceMemory _indexBufferMemory;
 
-    std::vector<VkBuffer> _uniformBuffers;
-    std::vector<VkDeviceMemory> _uniformBuffersMemory;
+    std::vector<Buffer> _uniforms;
 
     VkDescriptorPool _descriptorPool;
     std::vector<VkDescriptorSet> _descriptorSets;

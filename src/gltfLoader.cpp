@@ -13,12 +13,18 @@
 
 #include <iostream>
 
+// used to change to current coords
+constexpr glm::mat4 CHANGE_COORDS = glm::mat4(
+    1.f, 0.f, 0.f, 0.f,
+    0.f, 0.f, 1.f, 0.f,
+    0.f, 1.f, 0.f, 0.f,
+    0.f, 0.f, 0.f, 1.f);
+
 GltfLoader::GltfLoader(Application& app)
     : _app(app)
 {
     _nbPrimitives = 0;
     _nbGeometries = 0;
-    //_samplers.emplace_back(app);
 }
 
 GltfLoader::~GltfLoader()
@@ -96,7 +102,15 @@ void GltfLoader::load(std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& v
         loadNode(node, _model, nullptr, indexBuffer, vertexBuffer);
     }
 
+    createBuffers(indexBuffer, vertexBuffer);
 
+    // Add light that follows the player (starts at 0)
+    Light light {};
+    light.color = glm::vec4(1.f);
+    light.intensity = 10000.f;
+    light.pos = glm::vec3(0.f, 0.f, 0.f);
+
+    _lights.push_back(light);
 }
 
 void GltfLoader::createBuffers(std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer)
@@ -156,6 +170,11 @@ void GltfLoader::loadMaterials(tinygltf::Model& input)
         if (glTFMaterial.values.find("baseColorTexture") != glTFMaterial.values.end()) {
             _materials[i].baseColorTextureIndex = glTFMaterial.values["baseColorTexture"].TextureIndex();
         }
+
+        // Get normal map
+        if (glTFMaterial.values.find("normalTexture") != glTFMaterial.values.end()) {
+            _materials[i].normalTextureIndex = glTFMaterial.values["normalTexture"].TextureIndex();
+        }
     }
 }
 
@@ -211,7 +230,6 @@ void GltfLoader::loadNode(const tinygltf::Node& inputNode, const tinygltf::Model
             parent = parent->parent;
         }
 
-
         for (size_t i = 0; i < mesh.primitives.size(); i++) {
             const tinygltf::Primitive& glTFPrimitive = mesh.primitives[i];
             uint32_t firstIndex = static_cast<uint32_t>(indexBuffer.size());
@@ -255,10 +273,9 @@ void GltfLoader::loadNode(const tinygltf::Node& inputNode, const tinygltf::Model
                     vert.color = glm::vec4(1.0f);
                     vert.materialId = glm::vec4(glTFPrimitive.material, 0.f, 0.f, 0.f);
 
-                    if (true) { // preTransform
-                        vert.pos = glm::vec3(localMatrix * glm::vec4(vert.pos, 1.0f));
-                        vert.normal = glm::normalize(glm::mat3(localMatrix) * vert.normal);
-                    }
+                    // apply transforms
+                    vert.pos = glm::vec3(CHANGE_COORDS * localMatrix * glm::vec4(vert.pos, 1.0f));
+                    vert.normal = glm::normalize(glm::mat3(CHANGE_COORDS * localMatrix) * vert.normal);
 
                     vertexBuffer.push_back(vert);
                 }
@@ -323,55 +340,6 @@ void GltfLoader::loadTextures(tinygltf::Model& input)
     }
 }
 
-// Draw a single node including child nodes (if present)
-void GltfLoader::drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, size_t currentFrame, GltfLoader::Node node)
-{
-    VkDescriptorSet& descriptorSet = _app._descriptorSets[currentFrame];
-    if (node.mesh.primitives.size() > 0) {
-        // Pass the node's matrix via push constants
-        // Traverse the node hierarchy to the top-most parent to get the final matrix of the current node
-        glm::mat4 nodeMatrix = node.matrix;
-        GltfLoader::Node* currentParent = node.parent;
-        while (currentParent) {
-            nodeMatrix = currentParent->matrix * nodeMatrix;
-            currentParent = currentParent->parent;
-        }
-
-        VkDescriptorBufferInfo bufferInfo {};
-        bufferInfo.buffer = _app._uniformBuffers[currentFrame];
-        bufferInfo.offset = 0;
-        bufferInfo.range = VK_WHOLE_SIZE;
-
-        // Pass the final matrix to the vertex shader using push constants
-        vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &nodeMatrix);
-        for (const GltfLoader::Primitive& primitive : node.mesh.primitives) {
-            if (primitive.indexCount > 0) {
-                // Get the texture index for this primitive
-                Texture texture = _textures_idx[_materials[primitive.materialIndex].baseColorTextureIndex];
-                // Bind the descriptor for the current primitive's texture
-                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &_descriptorSets[texture.imageIndex], 0, nullptr);
-                vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, 0);
-            }
-        }
-    }
-    for (auto& child : node.children) {
-        drawNode(commandBuffer, pipelineLayout, currentFrame, *child.get());
-    }
-}
-
-// Draw the glTF scene starting at the top-level-nodes
-void GltfLoader::draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, size_t currentFrame)
-{
-    // All vertices and indices are stored in single buffers, so we only need to bind once
-    VkDeviceSize offsets[1] = { 0 };
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &_vertices.buffer, offsets);
-    vkCmdBindIndexBuffer(commandBuffer, _indices.buffer, 0, VK_INDEX_TYPE_UINT32);
-    // Render all nodes at top-level
-    for (auto& node : _nodes) {
-        drawNode(commandBuffer, pipelineLayout, currentFrame, *node.get());
-    }
-}
-
 size_t GltfLoader::getNumberOfPrimitives() const
 {
     return _nbPrimitives;
@@ -384,4 +352,6 @@ size_t GltfLoader::getNumberOfGeometries() const
 
 void GltfLoader::update(float deltaTime)
 {
+    // What ever happend change light position to player
+    _lights[0].pos = _app._character.getPosition();
 }

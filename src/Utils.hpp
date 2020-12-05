@@ -32,8 +32,8 @@ struct Vertex {
 };
 
 struct Light {
-    glm::vec3 pos;
     glm::vec4 color;
+    glm::vec3 pos;
     float intensity;
 };
 

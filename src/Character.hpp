@@ -49,6 +49,7 @@ private:
     float _characterSpeed { 4.f };
     float _mouseSpeed { 200.f };
     bool _focused { false };
+    bool _isRunning { false };
 
     float _horizontalAngle { 7.f };
     float _verticalAngle { -2.5f };

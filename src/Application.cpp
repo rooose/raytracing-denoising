@@ -1,4 +1,4 @@
-#include "Application.hpp"
+﻿#include "Application.hpp"
 #include "ShaderModule.hpp"
 #include "RandomScene.hpp"
 
@@ -119,7 +119,7 @@ void Application::initWindow()
 {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    _window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Vulkan Tutorial", nullptr, nullptr);
+    _window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "No raytracing no life", nullptr, nullptr);
     glfwSetWindowUserPointer(_window, this);
     glfwSetFramebufferSizeCallback(_window, [](GLFWwindow* window, int width, int height) {
         auto app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
@@ -147,9 +147,13 @@ void Application::initVulkan()
     createStorageImage();
     _samplers.emplace_back(*this);
     _textures.emplace_back(*this, _samplers[0], SKYDOME_PATH);
-    _models.push_back(new RandomScene(*this, 20.f, 30));
-    //_models[0]->loadModel(MODEL_PATH);
-    _models[0]->load(_indices, _vertices);
+    if (USE_RANDOM_SCENE) {
+        _model = std::make_unique<RandomScene>(*this, 20.f, 30);
+    } else {
+        _model = std::make_unique<GltfLoader>(*this);
+        _model->loadModel(MODEL_PATH);
+    }
+    _model->load(_indices, _vertices);
     _rtHandler.init();
     createUniformBuffers();
     createModelsUniforms();
@@ -166,7 +170,7 @@ void Application::createVKInstance()
 {
     VkApplicationInfo appInfo {};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "Vulkan Tutorial";
+    appInfo.pApplicationName = "No raytracing no life";
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.pEngineName = "No Engine";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
@@ -258,19 +262,12 @@ void Application::cleanup()
 {
     _samplers.clear();
     _textures.clear();
-    for (auto model : _models) {
-        delete model;
-    }
-    _models.clear();
+
+    _model.reset();
 
     cleanupSwapchain();
 
     deleteModelsUniforms();
-
-    //for (size_t i = 0; i < _swapchainImages.size(); i++) {
-    //    vkDestroyBuffer(_device, _uniformBuffers[i], nullptr);
-    //    vkFreeMemory(_device, _uniformBuffersMemory[i], nullptr);
-    //}
 
     vkDestroyDescriptorSetLayout(_device, _descriptorSetLayouts.raytrace, nullptr);
     vkDestroyDescriptorSetLayout(_device, _descriptorSetLayouts.textures, nullptr);
@@ -291,8 +288,8 @@ void Application::cleanup()
 
     _rtHandler.cleanupRaytracingHandler();
 
-    vkDestroyBuffer(_device, _shaderBindingTableBuffer, nullptr);
-    vkFreeMemory(_device, _shaderBindingTableMemory, nullptr);
+    vkDestroyBuffer(_device, _shaderBindingTable.buffer, nullptr);
+    vkFreeMemory(_device, _shaderBindingTable.memory, nullptr);
 
     vkDestroyDevice(_device, nullptr);
 
@@ -689,27 +686,25 @@ void Application::createImageViews()
 void Application::createModelsUniforms()
 {
     VkDeviceSize BufferSize = sizeof(GltfLoader::Material);
-    const size_t nbMaterials = _models[0]->_materials.size() * _swapchainImages.size();
+    const size_t nbMaterials = _model->_materials.size() * _swapchainImages.size();
     _materialBuffers.resize(nbMaterials);
 
     for (size_t i = 0; i < nbMaterials; i++) {
         createBuffer(BufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, _materialBuffers[i].buffer, _materialBuffers[i].memory); // TODO : delete
     }
 
-    for (size_t i = 0; i < _models[0]->_materials.size(); i++) {
+    for (size_t i = 0; i < _model->_materials.size(); i++) {
         for (size_t j = 0; j < _swapchainImages.size(); j++) {
             void* data;
-            vkMapMemory(_device, _materialBuffers[i * _swapchainImages.size() + j].memory, 0, sizeof(_models[0]->_materials[i]), NULL, &data);
-            memcpy(data, &_models[0]->_materials[i], sizeof(_models[0]->_materials[i]));
+            vkMapMemory(_device, _materialBuffers[i * _swapchainImages.size() + j].memory, 0, sizeof(_model->_materials[i]), NULL, &data);
+            memcpy(data, &_model->_materials[i], sizeof(_model->_materials[i]));
             vkUnmapMemory(_device, _materialBuffers[i * _swapchainImages.size() + j].memory);
         }
     }
 
     // Lights
     VkDeviceSize LightBufferSize = sizeof(Light);
-    for (size_t i = 0; i < _models.size(); i++) {
-        _lights.insert(_lights.end(), _models[i]->_lights.begin(), _models[i]->_lights.end());
-    }
+    _lights.insert(_lights.end(), _model->_lights.begin(), _model->_lights.end());
 
     _lightsBuffer.resize(_lights.size() * _swapchainImages.size()); // lol
 
@@ -738,7 +733,6 @@ void Application::deleteModelsUniforms()
         vkDestroyBuffer(_device, _lightsBuffer[i].buffer, nullptr);
         vkFreeMemory(_device, _lightsBuffer[i].memory, nullptr);
     }
-
 }
 
 void Application::createStorageImage()
@@ -760,7 +754,7 @@ void Application::createShaderBindingTable()
 
     const uint32_t sbtSize = _rtHandler._rtProperties.shaderGroupBaseAlignment * groupCount;
 
-    createBuffer(sbtSize, VK_BUFFER_USAGE_RAY_TRACING_BIT_KHR, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, _shaderBindingTableBuffer, _shaderBindingTableMemory);
+    createBuffer(sbtSize, VK_BUFFER_USAGE_RAY_TRACING_BIT_KHR, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, _shaderBindingTable.buffer, _shaderBindingTable.memory);
     // Write the shader handles to the shader binding table
     std::vector<uint8_t> shaderHandleStorage(sbtSize);
     if (_rtHandler.vkGetRayTracingShaderGroupHandlesKHR(_device, _raycastPipeline, 0, groupCount, sbtSize, shaderHandleStorage.data()) != VK_SUCCESS) {
@@ -768,7 +762,7 @@ void Application::createShaderBindingTable()
     }
 
     uint8_t* data;
-    vkMapMemory(_device, _shaderBindingTableMemory, 0, sbtSize, NULL, reinterpret_cast<void**>(&data));
+    vkMapMemory(_device, _shaderBindingTable.memory, 0, sbtSize, NULL, reinterpret_cast<void**>(&data));
 
     // This part is required, as the alignment and handle size may differ
     for (uint32_t i = 0; i < groupCount; i++) {
@@ -776,7 +770,7 @@ void Application::createShaderBindingTable()
         data += _rtHandler._rtProperties.shaderGroupBaseAlignment;
     }
 
-    vkUnmapMemory(_device, _shaderBindingTableMemory);
+    vkUnmapMemory(_device, _shaderBindingTable.memory);
 }
 
 void Application::createDescriptorSetLayout()
@@ -815,23 +809,21 @@ void Application::createDescriptorSetLayout()
     materialsLayoutBiding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     materialsLayoutBiding.stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
     materialsLayoutBiding.binding = 5;
-    materialsLayoutBiding.descriptorCount = _models[0]->_materials.size();
+    materialsLayoutBiding.descriptorCount = _model->_materials.size();
 
-    VkDescriptorSetLayoutBinding lightsLayoutBinding{};
+    VkDescriptorSetLayoutBinding lightsLayoutBinding {};
     lightsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     lightsLayoutBinding.stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
     lightsLayoutBinding.binding = 6;
     lightsLayoutBinding.descriptorCount = _lights.size();
 
-    std::array<VkDescriptorSetLayoutBinding, 7> bindings({
-        uniformBufferBinding,
+    std::array<VkDescriptorSetLayoutBinding, 7> bindings({ uniformBufferBinding,
         accelerationStructureLayoutBinding,
         resultImageLayoutBinding,
         verticesLayoutBinding,
         indicesLayoutBinding,
         materialsLayoutBiding,
-        lightsLayoutBinding
-    });
+        lightsLayoutBinding });
 
     VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo {};
     descriptorSetLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -844,7 +836,7 @@ void Application::createDescriptorSetLayout()
     setLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     setLayoutBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_MISS_BIT_KHR;
     setLayoutBinding.binding = 0;
-    setLayoutBinding.descriptorCount = _models[0]->_textures.size() + _textures.size();
+    setLayoutBinding.descriptorCount = _model->_textures.size() + _textures.size();
 
     descriptorSetLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptorSetLayoutCreateInfo.bindingCount = 1;
@@ -862,7 +854,7 @@ void Application::createRaytracingPipeline()
     auto raychit = ShaderModule(_device, "shaders/closehit.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
     auto shadowmiss = ShaderModule(_device, "shaders/raytraceShadow.rmiss.spv", VK_SHADER_STAGE_MISS_BIT_KHR);
 
-    std::array<VkPipelineShaderStageCreateInfo, 4> shaderStages({ raygen.getStageInfo(), raymiss.getStageInfo(), raychit.getStageInfo(), shadowmiss.getStageInfo()});
+    std::array<VkPipelineShaderStageCreateInfo, 4> shaderStages({ raygen.getStageInfo(), raymiss.getStageInfo(), raychit.getStageInfo(), shadowmiss.getStageInfo() });
 
     VkPushConstantRange pushConstantRange {};
     pushConstantRange.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
@@ -1021,11 +1013,10 @@ void Application::createUniformBuffers()
 {
     VkDeviceSize BufferSize = sizeof(UniformBufferObject);
 
-    _uniformBuffers.resize(_swapchainImages.size());
-    _uniformBuffersMemory.resize(_swapchainImages.size());
+    _uniforms.resize(_swapchainImages.size());
 
     for (size_t i = 0; i < _swapchainImages.size(); i++) {
-        createBuffer(BufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, _uniformBuffers[i], _uniformBuffersMemory[i]);
+        createBuffer(BufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, _uniforms[i].buffer, _uniforms[i].memory);
     }
 }
 
@@ -1053,19 +1044,15 @@ void Application::createDescriptorPool()
 
     VkDescriptorPoolSize ImagesDescriptorPoolSize {};
     ImagesDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    ImagesDescriptorPoolSize.descriptorCount = _models[0]->_textures.size() + _textures.size();
+    ImagesDescriptorPoolSize.descriptorCount = _model->_textures.size() + _textures.size();
 
     VkDescriptorPoolSize matDescriptorPoolSize {};
     matDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     matDescriptorPoolSize.descriptorCount = _materialBuffers.size();
 
-    VkDescriptorPoolSize lightsDescriptorPoolSize{};
+    VkDescriptorPoolSize lightsDescriptorPoolSize {};
     lightsDescriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     lightsDescriptorPoolSize.descriptorCount = _lightsBuffer.size();
-
-  /*  for (int i = 0; i < _models.size(); i++) {
-        ImagesDescriptorPoolSize.descriptorCount += _models[i]->_descriptorSets.size();
-    }*/
 
     std::vector<VkDescriptorPoolSize> poolSizes = {
         uboDescriptorPoolSize,
@@ -1111,7 +1098,7 @@ void Application::createDescriptorSets()
 
         // ubo
         VkDescriptorBufferInfo bufferInfo {};
-        bufferInfo.buffer = _uniformBuffers[i];
+        bufferInfo.buffer = _uniforms[i].buffer;
         bufferInfo.offset = 0;
         bufferInfo.range = VK_WHOLE_SIZE;
 
@@ -1156,7 +1143,7 @@ void Application::createDescriptorSets()
 
         // Vertex buffer
         VkDescriptorBufferInfo vertexBufferDescriptor {};
-        vertexBufferDescriptor.buffer = _models[0]->_vertices.buffer;
+        vertexBufferDescriptor.buffer = _model->_vertices.buffer;
         vertexBufferDescriptor.range = VK_WHOLE_SIZE;
 
         descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1171,7 +1158,7 @@ void Application::createDescriptorSets()
 
         // Index buffer
         VkDescriptorBufferInfo indexBufferDescriptor {};
-        indexBufferDescriptor.buffer = _models[0]->_indices.buffer;
+        indexBufferDescriptor.buffer = _model->_indices.buffer;
         indexBufferDescriptor.range = VK_WHOLE_SIZE;
 
         descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1186,8 +1173,8 @@ void Application::createDescriptorSets()
 
         // Material Buffer
         std::vector<VkDescriptorBufferInfo> matBufferDescriptors;
-        matBufferDescriptors.resize(_models[0]->_materials.size());
-        for (size_t j = 0; j < _models[0]->_materials.size(); j++) {
+        matBufferDescriptors.resize(_model->_materials.size());
+        for (size_t j = 0; j < _model->_materials.size(); j++) {
             matBufferDescriptors[j].buffer = _materialBuffers[i + j * _swapchainImages.size()].buffer;
             matBufferDescriptors[j].range = VK_WHOLE_SIZE;
         }
@@ -1231,15 +1218,13 @@ void Application::createDescriptorSets()
     }
 
     std::vector<VkDescriptorImageInfo> imageInfos;
-    
+
     for (size_t j = 0; j < _textures.size(); j++) {
         imageInfos.push_back(*_textures[j].getDescriptorSet(_modelTexturesDescriptorSet, 0).pImageInfo);
     }
 
-    for (size_t j = 0; j < _models.size(); j++) {
-        for (size_t i = 0; i < _models[j]->_textures.size(); i++) {
-            imageInfos.push_back(*_models[j]->_textures[i].getDescriptorSet(_modelTexturesDescriptorSet, 0).pImageInfo);
-        }
+    for (size_t i = 0; i < _model->_textures.size(); i++) {
+        imageInfos.push_back(*_model->_textures[i].getDescriptorSet(_modelTexturesDescriptorSet, 0).pImageInfo);
     }
 
     VkWriteDescriptorSet descriptorSet {};
@@ -1288,19 +1273,19 @@ void Application::createCommandBuffers()
 
         const VkDeviceSize sbtSize = _rtHandler._rtProperties.shaderGroupBaseAlignment * (VkDeviceSize)_shaderGroups.size();
         VkStridedBufferRegionKHR raygenShaderSBTEntry {};
-        raygenShaderSBTEntry.buffer = _shaderBindingTableBuffer;
+        raygenShaderSBTEntry.buffer = _shaderBindingTable.buffer;
         raygenShaderSBTEntry.offset = static_cast<VkDeviceSize>(_rtHandler._rtProperties.shaderGroupBaseAlignment * 0); // INDEX_RAYGEN_GROUP
         raygenShaderSBTEntry.stride = _rtHandler._rtProperties.shaderGroupBaseAlignment;
         raygenShaderSBTEntry.size = sbtSize;
 
         VkStridedBufferRegionKHR missShaderSBTEntry {};
-        missShaderSBTEntry.buffer = _shaderBindingTableBuffer;
+        missShaderSBTEntry.buffer = _shaderBindingTable.buffer;
         missShaderSBTEntry.offset = static_cast<VkDeviceSize>(_rtHandler._rtProperties.shaderGroupBaseAlignment * 1); // INDEX_MISS_GROUP
         missShaderSBTEntry.stride = _rtHandler._rtProperties.shaderGroupBaseAlignment;
         missShaderSBTEntry.size = sbtSize;
 
         VkStridedBufferRegionKHR hitShaderSBTEntry {};
-        hitShaderSBTEntry.buffer = _shaderBindingTableBuffer;
+        hitShaderSBTEntry.buffer = _shaderBindingTable.buffer;
         hitShaderSBTEntry.offset = static_cast<VkDeviceSize>(_rtHandler._rtProperties.shaderGroupBaseAlignment * 3); // INDEX_CLOSEST_HIT_GROUP
         hitShaderSBTEntry.stride = _rtHandler._rtProperties.shaderGroupBaseAlignment;
         hitShaderSBTEntry.size = sbtSize;
@@ -1642,7 +1627,7 @@ void Application::recreateSwapchain()
 
     //recreateStorageImages
     createStorageImage();
-    
+
     createRaytracingPipeline();
     createUniformBuffers();
     createDescriptorPool();
@@ -1665,22 +1650,22 @@ void Application::updateUniformBuffer(uint32_t currentImage)
     ubo.vertexSize = sizeof(Vertex);
 
     void* data;
-    vkMapMemory(_device, _uniformBuffersMemory[currentImage], 0, sizeof(ubo), NULL, &data);
+    vkMapMemory(_device, _uniforms[currentImage].memory, 0, sizeof(ubo), NULL, &data);
     memcpy(data, &ubo, sizeof(ubo));
-    vkUnmapMemory(_device, _uniformBuffersMemory[currentImage]);
+    vkUnmapMemory(_device, _uniforms[currentImage].memory);
 
     updateModel(time, currentImage);
 }
 
 void Application::updateModel(float deltaTime, uint32_t currentImage)
 {
-    _models[0]->update(deltaTime);
+    _model->update(deltaTime);
 
     _lights.clear();
-    _lights.insert(_lights.end(), _models[0]->_lights.begin(), _models[0]->_lights.end());
+    _lights.insert(_lights.end(), _model->_lights.begin(), _model->_lights.end());
 
     // Update Light positions
-    for (size_t i = 0; i < _models[0]->_lights.size(); i++) {
+    for (size_t i = 0; i < _model->_lights.size(); i++) {
         void* data;
         vkMapMemory(_device, _lightsBuffer[i * _swapchainImages.size() + currentImage].memory, 0, sizeof(Light), NULL, &data);
         memcpy(data, &_lights[i], sizeof(Light));
@@ -1696,8 +1681,8 @@ void Application::cleanupSwapchain()
     }
 
     for (size_t i = 0; i < _swapchainImages.size(); i++) {
-        vkDestroyBuffer(_device, _uniformBuffers[i], nullptr);
-        vkFreeMemory(_device, _uniformBuffersMemory[i], nullptr);
+        vkDestroyBuffer(_device, _uniforms[i].buffer, nullptr);
+        vkFreeMemory(_device, _uniforms[i].memory, nullptr);
     }
 
     vkDestroyDescriptorPool(_device, _descriptorPool, nullptr);

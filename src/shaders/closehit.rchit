@@ -28,6 +28,7 @@ layout(binding = 5, set = 0) uniform Material
 { 
 	vec4 baseColorFactor;
 	int baseColorTextureIndex;
+	int normalTextureIndex;
 	float ambientCoeff;
     float diffuseCoeff;
     float specularCoeff;
@@ -39,8 +40,8 @@ layout(binding = 5, set = 0) uniform Material
 
 layout(binding = 6, set = 0) uniform Light 
 { 
-    vec3 pos;
     vec4 color;
+    vec3 pos;
     float intensity;
 } lights[];
 
@@ -92,18 +93,31 @@ void main()
 	// Interpolate normal
 	const vec3 barycentricCoords = vec3(1.0f - attribs.x - attribs.y, attribs.x, attribs.y);
 	vec3 normal = normalize(v0.normal * barycentricCoords.x + v1.normal * barycentricCoords.y + v2.normal * barycentricCoords.z);
-	const vec4 color = (v0.color * barycentricCoords.x + v1.color * barycentricCoords.y + v2.color * barycentricCoords.z) * materials[v0.materialId].baseColorFactor ;
+	vec4 color = (v0.color * barycentricCoords.x + v1.color * barycentricCoords.y + v2.color * barycentricCoords.z) * materials[v0.materialId].baseColorFactor ;
 	const vec3 pos = (v0.pos * barycentricCoords.x + v1.pos * barycentricCoords.y + v2.pos * barycentricCoords.z);
 
 	// Interpolate for texture
 	const vec2 textCoords = (v0.texCoord * barycentricCoords.x + v1.texCoord * barycentricCoords.y + v2.texCoord * barycentricCoords.z);
+	if ( materials[v0.materialId].baseColorTextureIndex >= 0 )
+	{
+		const int colorId = materials[v0.materialId].baseColorTextureIndex + 1; // 0 is reserved for skybox
+		color = texture(texSamplers[colorId],  textCoords);
+	}
+
+	if ( materials[v0.materialId].normalTextureIndex >= 0 )
+	{
+		const int normalId =  materials[v0.materialId].normalTextureIndex + 1;  // 0 is reserved for skybox
+		normal = vec3(texture(texSamplers[normalId],  textCoords));
+	}
 
 	// Basic lighting
 	vec4 lightColor = vec4(0.,0.,0.,1.);
-	for (int i = 0; i < PushConstant.nbLights; i ++) //  PushConstant.nbLights
+	for (int i = 0; i < PushConstant.nbLights; i ++)
 	{
 		const vec3 origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
 		const vec3 lightVector = normalize(lights[i].pos - origin);
+		const float lightDistance = length(lights[i].pos - origin);
+		const float distanceFactor = min(1., 20. * lights[i].intensity / (lightDistance * lightDistance));
 		const float dot_product = dot(lightVector, normal);
 
 		if (dot_product > 0.) {
@@ -114,7 +128,7 @@ void main()
 			float shadow_factor = 1.;
 			//	 Trace shadow ray and offset indices to match shadow hit/miss shader group indices
 			traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0xFF, 1, 0, 1, origin, tmin, lightVector, tmax, 2);
-			const float gouraudFactor = materials[v0.materialId].diffuseCoeff * dot_product;
+			const float gouraudFactor = distanceFactor * materials[v0.materialId].diffuseCoeff * dot_product;
 
 			if (shadowed) {
 				shadow_factor = 0.3;
@@ -122,7 +136,7 @@ void main()
 				const float alignement = dot(normalize(reflect(lightVector, normal)), gl_WorldRayDirectionEXT);
 				if (alignement > 0.)
 				{
-					const float phongfactor = materials[v0.materialId].specularCoeff * pow(alignement, materials[v0.materialId].shininessCoeff);
+					const float phongfactor =distanceFactor *  materials[v0.materialId].specularCoeff * pow(alignement, materials[v0.materialId].shininessCoeff);
 					lightColor += phongfactor * lights[i].color;
 
 				}
@@ -134,7 +148,6 @@ void main()
 	lightColor = vec4(min(1., lightColor.x), min(1., lightColor.y), min(1., lightColor.z), 1.);
 
 	hitValue.color = (lightColor * color).xyz;
-//	hitValue.color = normal;
 	hitValue.distance = gl_HitTEXT;
 	hitValue.normal = normal;
 	hitValue.reflector = materials[v0.materialId].reflexionCoeff;

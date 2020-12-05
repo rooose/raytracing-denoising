@@ -211,7 +211,7 @@ RandomScene::RandomScene(Application& app, float sceneSize, uint32_t scale, uint
     const size_t nbBoxes = static_cast<size_t>(rand() % scale) + scale / 2;
 
     // Generate lighting and materials
-    generateLighting(nbLights, true);
+    generateLighting(nbLights, /* hasMovement */ true);
     generateMaterials(nbMaterials);
 
     // Generate floor plan
@@ -253,13 +253,13 @@ void RandomScene::generateLighting(size_t nbLight, bool hasMovement)
     for (size_t i = 0; i < nbLight; i++) {
         if (hasMovement) {
             // set speed
-            _LightMouvement[i].first = glm::radians(static_cast<float>(rand() % 500) / 100000. + 5 / 1000);
+            _LightMouvement[i].first = glm::radians(static_cast<float>(rand() % 500) / 100000.);
             _LightMouvement[i].second = glm::normalize(glm::vec3(static_cast<float>(rand() % 10000) / 10000., static_cast<float>(rand() % 10000) / 10000., static_cast<float>(rand() % 10000) / 10000.));
         }
         Light light;
         // Generate random color
         light.color = glm::vec4(static_cast<float>(rand() % 10000) / 10000.f, static_cast<float>(rand() % 10000) / 10000.f, static_cast<float>(rand() % 10000) / 10000.f, 1.f);
-        light.intensity = 1.f;
+        light.intensity = static_cast<float>(rand() % 5000) / 5000.f + .5f;
         light.pos = getRandomTransformation() * glm::vec4(0.f, 0.f, 0.f, 1.f);
         _lights.push_back(light);
     }
@@ -280,11 +280,13 @@ void RandomScene::generateMaterials(size_t nbMaterials)
         Material mat;
         mat.baseColorFactor = glm::vec4(static_cast<float>(rand() % 10000) / 10000.f, static_cast<float>(rand() % 10000) / 10000.f, static_cast<float>(rand() % 10000) / 10000.f, 1.f);
         mat.baseColorTextureIndex = -1;
+        mat.normalTextureIndex = -1;
         mat.ambientCoeff = static_cast<float>(rand() % 50000) / 10000.f + 0.5;
         mat.diffuseCoeff = static_cast<float>(rand() % 50000) / 10000.f + 0.5;
         mat.reflexionCoeff = static_cast<float>(rand() % 10000) / 10000.f;
-        mat.shininessCoeff = 20.;
-        mat.specularCoeff = 1.;
+        mat.shininessCoeff = static_cast<float>(rand() % 20);
+        mat.specularCoeff = static_cast<float>(rand() % 50000) / 10000.f + 0.5;
+        ;
 
         _materials.push_back(mat);
     }

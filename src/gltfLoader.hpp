@@ -12,13 +12,14 @@ class GltfLoader {
 public:
     struct Material {
         glm::vec4 baseColorFactor = glm::vec4(1.0f);
-        uint32_t baseColorTextureIndex;
-        float ambientCoeff =1.f;
+        int32_t baseColorTextureIndex = -1;
+        int32_t normalTextureIndex = -1 ;
+        float ambientCoeff = 1.f;
         float diffuseCoeff = 1.f;
         float specularCoeff = 1.f;
         float shininessCoeff = 1.f;
-        float reflexionCoeff = 1.f;
-        float refractionCoeff = 1.f;
+        float reflexionCoeff = 0.f;
+        float refractionCoeff = 0.f;
         float refractionIndice = 1.f;
     };
 
@@ -37,13 +38,12 @@ public:
     // A node represents an object in the glTF scene graph
     struct Node {
         Node* parent;
-        std::vector < std::shared_ptr<Node>> children; // TODO : Change to unique
+        std::vector<std::shared_ptr<Node>> children;
         Mesh mesh;
         glm::mat4 matrix;
     };
 
-
-    struct Texture { // TODO : Put this in TextureModule
+    struct Texture {
         int32_t imageIndex;
     };
 
@@ -56,8 +56,6 @@ public:
     virtual void load(std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);
 
     void loadNode(const tinygltf::Node& inputNode, const tinygltf::Model& input, GltfLoader::Node* parent, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);
-    void drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, size_t currentFrame, GltfLoader::Node node);
-    void draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, size_t currentFrame);
     size_t getNumberOfPrimitives() const;
     size_t getNumberOfGeometries() const;
 
@@ -73,7 +71,7 @@ protected:
     std::vector<Texture> _textures_idx;
     std::vector<SamplerModule> _samplers;
     std::vector<Material> _materials;
-    std::vector<std::shared_ptr<Node>> _nodes; // TODO: Change to unique
+    std::vector<std::shared_ptr<Node>> _nodes;
     std::vector<VkDescriptorSet> _descriptorSets;
     std::vector<Light> _lights;
     size_t _nbPrimitives;
@@ -82,10 +80,7 @@ protected:
     Application& _app;
 
     // Single vertex buffer for all primitives
-    struct {
-        VkBuffer buffer;
-        VkDeviceMemory memory;
-    } _vertices;
+    Buffer _vertices;
 
     // Single index buffer for all primitives
     struct {

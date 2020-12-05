@@ -94,7 +94,6 @@ void Character::updateMouse(GLFWwindow* window, double deltaTime)
         float xDiff = static_cast<float>(xpos - mid_width) / width;
         float yDiff = static_cast<float>(ypos - mid_height) / height;
 
-
         // New angles
         _horizontalAngle = std::fmod(_horizontalAngle + _mouseSpeed * static_cast<float>(deltaTime * xDiff), 2.f * glm::pi<float>());
         _verticalAngle = std::fmod(_verticalAngle + _mouseSpeed * static_cast<float>(deltaTime * yDiff), 2.f * glm::pi<float>());
@@ -108,22 +107,36 @@ void Character::updateMouse(GLFWwindow* window, double deltaTime)
 void Character::updatekeyboard(GLFWwindow* window, double deltaTime)
 {
     // TODO: Add Input manager
+    float mouvementMultiplier = 1.f;
+    if (_isRunning) {
+        mouvementMultiplier = 4.f;
+    } else {
+        mouvementMultiplier = 1.f;
+    }
 
     // Move forward
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-        _pos += _dir * (float)deltaTime * _characterSpeed;
+        _pos += _dir * mouvementMultiplier * (float)deltaTime * _characterSpeed;
     }
     // Move backward
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-        _pos -= _dir * (float)deltaTime * _characterSpeed;
+        _pos -= _dir * mouvementMultiplier * (float)deltaTime * _characterSpeed;
     }
     // Strafe right
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-        _pos += _right * (float)deltaTime * _characterSpeed;
+        _pos += _right * mouvementMultiplier * (float)deltaTime * _characterSpeed;
     }
     // Strafe left
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-        _pos -= _right * (float)deltaTime * _characterSpeed;
+        _pos -= _right * mouvementMultiplier * (float)deltaTime * _characterSpeed;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+        _isRunning = true;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE) {
+        _isRunning = false;
     }
 
     // Quit focus mode
